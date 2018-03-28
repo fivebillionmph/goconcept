@@ -10,7 +10,7 @@ type SQLRowInterface interface {
 }
 
 type Connection struct {
-	db *sql.db
+	DB *sql.DB
 }
 
 func newConnection(host string, user string, password string, db string) (*Connection, error) {
@@ -23,5 +23,5 @@ func newConnection(host string, user string, password string, db string) (*Conne
 }
 
 func (c *Connection) close() {
-	c.db.close()
+	c.DB.close()
 }
