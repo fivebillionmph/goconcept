@@ -44,7 +44,7 @@ func DBConceptRelationship__getByConceptID(cxn *Connection, id int) (*[]DBConcep
 	return &rels, nil
 }
 
-func (d *DBConceptRelationship) loadConcept(cxn *Connection, concept_id int) {
+func (d *DBConceptRelationship) LoadConcept(cxn *Connection, concept_id int) {
 	if concept_id != 1 && concept_id != 2 {
 		return
 	}

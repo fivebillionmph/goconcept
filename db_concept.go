@@ -51,7 +51,7 @@ func DBConcept__getByID(cxn *Connection, id int) (*DBConcept, error) {
 		return nil, errors.New("could not find concept")
 	}
 
-	concept.loadData(cxn)
+	concept.LoadData(cxn)
 	return &concept, nil
 }
 
@@ -64,7 +64,7 @@ func DBConcept__getByTypeName(cxn *Connection, type_name string, name string) (*
 		return nil, err
 	}
 
-	concept.loadData(cxn)
+	concept.LoadData(cxn)
 	return &concept, nil
 }
 
@@ -79,7 +79,7 @@ func DBConcept__getByType(cxn *Connection, type_name string, offset int, count i
 		concept := DBConcept{}
 		err := concept.readRow(rows)
 		if err == nil {
-			concept.loadData(cxn)
+			concept.LoadData(cxn)
 			concepts = append(concepts, concept)
 		}
 	}
@@ -98,7 +98,7 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 
 	var err error
 
-	concept.loadData(cxn)
+	concept.LoadData(cxn)
 	for _, d := range concept.Data {
 		err = DBConceptData__delete(d)
 		if err != nil {
@@ -106,7 +106,7 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 		}
 	}
 
-	concept.loadRelationships(cxn)
+	concept.LoadRelationships(cxn)
 	for _, r := range concept.Relationships {
 		err = DBConceptRelationship__delete(r)
 		if err != nil {
@@ -129,7 +129,7 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 	return nil
 }
 
-func (d *DBConcept) loadData(cxn *Connection) {
+func (d *DBConcept) LoadData(cxn *Connection) {
 	if d.Data != nil {
 		return
 	}
@@ -154,7 +154,7 @@ func DBConcept__getCountByType(cxn *Connection, type_name string) (int, error ) 
 	return count, nil
 }
 
-func (d *DBConcept) loadRelationships(cxn *Connection) {
+func (d *DBConcept) LoadRelationships(cxn *Connection) {
 	if d.Relationships != nil {
 		return
 	}
@@ -170,11 +170,11 @@ func (d *DBConcept) loadRelationships(cxn *Connection) {
 		var other_concept *DBConcept
 		var reltype string
 		if rel.F_id1 == d.F_id {
-			rel.loadConcept(cxn, 2)
+			rel.LoadConcept(cxn, 2)
 			other_concept = rel.concept2
 			reltype = rel.F_string1
 		} else {
-			rel.loadConcept(cxn, 1)
+			rel.LoadConcept(cxn, 1)
 			other_concept = rel.concept1
 			reltype = rel.F_string2
 		}
