@@ -35,7 +35,8 @@ func NewServer(cookie_key string) (*Server, error) {
 	return &Server{http_server, logger, cookie_store, concept_types, concept_relationship_types, connection, router}
 }
 
-fun (s *Server) Run(static_path string, static_dir, string, html_file string, admin_path string, admin_html_file string) error {
+fun (s *Server) Run(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string) error {
+	s.addAdminRoutes()
 	s.addStaticRouterPath(static_path, static_dir)
 	s.addHTMLRouterPath(admin_path, admin_html_file)
 	s.addHTMLRouterPath("/" html_file)
@@ -50,20 +51,20 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 		return errors.New("nil concept type")
 	}
 	for _, ct := range s.concept_types {
-		if ct.type_name == concept_type.type_name {
+		if ct.type_name == concept_type.Type_name {
 			return errors.New("duplicate concept name")
 		}
-		if ct.pathname != "" && ct.pathname == concept_type.pathname {
+		if ct.pathname != "" && ct.pathname == concept_type.Pathname {
 			return errors.New("duplicate pathname")
 		}
 	}
-	s.concept_types[concept_type.type_name] = concept_type
+	s.concept_types[concept_type.Type_name] = concept_type
 
-	if concept_type.api_available {
+	if concept_type.Api_available {
 		single_endpoint_handler := func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 			vars := mux.Vars(r)
 			name := vars["name"]
-			concept, err := DBConcept__getByTypeName(cxn, concept_type.type_name, name)
+			concept, err := DBConcept__getByTypeName(cxn, concept_type.Type_name, name)
 			if err != nil {
 				s.Logger(err)
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -74,34 +75,13 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 
 			s.SendJSONResponse(w, r, concept)
 		}
-		s.AddRouterPath("/api/v1/c/" + concept_type.pathname + "/{name}", "GET", single_endpoint_handler)
+		s.AddRouterPath("/api/v1/c/" + concept_type.Pathname + "/{name}", "GET", single_endpoint_handler)
 
 		many_endpoint_handler := func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 			query_vars := r.URL.Query()
-			count := 20
-			offset := 0
-
-			req_count, ok := query_vars["count"]
-			if ok {
-				if len(req_count) > 0 {
-					req_count_int, err := strconv.Atoi(req_count[0])
-					if err == nil && req_count_int < 100 && req_count_int > 0 {
-						count = req_count_int
-					}
-				}
-			}
-
-			req_offset, ok := query_vars["offset"]
-			if ok {
-				if len(req_offset) > 0 {
-					req_offset_int, err := strconv.Atoi(req_offset[0])
-					if err == nil && req_offset_int >= 0 {
-						offset = req_offset_int
-					}
-				}
-			}
-
-			concepts, err := DBConcept__getByType(cxn, concept_type.type_name, offset, count)
+			count := Util__queryToInt(query_vars, "count", 0, 20, false, false, 20)
+			offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
+			concepts, err := DBConcept__getByType(cxn, concept_type.Type_name, offset, count)
 			if err != nil {
 				s.Logger(err)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
@@ -110,7 +90,7 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 
 			s.SendJSONResponse(w, r, concepts)
 		}
-		s.AddRouterPath("/api/v1/c/" + concept_type.pathname), "GET", many_endpoint_handler)
+		s.AddRouterPath("/api/v1/c/" + concept_type.Pathname), "GET", many_endpoint_handler)
 	}
 
 	return nil
@@ -121,19 +101,19 @@ func (s *Server) AddConceptRelationshipType(concept_relationship_type *ConceptRe
 		return errors.New("nil concept relationship type")
 	}
 	for _, crt := range s.concept_relationship_types {
-		if crt.type1 == concept_relationship_type.type1 &&
-			crt.type2 == concept_relationship_type.type2 &&
-			crt.string1 == concept_relationship_type.string1 &&
-			crt.string2 == concept_relationship_type.string2 {
+		if crt.type1 == concept_relationship_type.Type1 &&
+			crt.type2 == concept_relationship_type.Type2 &&
+			crt.string1 == concept_relationship_type.String1 &&
+			crt.string2 == concept_relationship_type.String2 {
 			return errors.New("duplicate concept relationship type")
 		}
 	}
 	type1_found := false
 	type2_found := false
 	for _, ct := range s.concept_types {
-		if ct.type_name == concept_relationship_type.type1 {
+		if ct.type_name == concept_relationship_type.Type1 {
 			type1 = true
-		} else if ct.type_name == concept_relationship_type.type2 {
+		} else if ct.type_name == concept_relationship_type.Type2 {
 			type2 = true
 		}
 		if type1 && type2 {

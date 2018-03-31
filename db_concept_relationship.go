@@ -14,6 +14,31 @@ type DBConceptRelationship struct {
 	concept2 *DBConcept
 }
 
+func DBConceptRelationship__create(cxn *Connection, id1 int, id2 int, string1 string, string2 string) (*DBConceptRelationship, error) {
+	row := cxn.DB.QueryRow("select count(*) from " + DBConceptRelationship__table + " where id1 = ? and id2 = ? and string1 = ? and string2 = ?")
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, errors.New("already exists")
+	}
+
+	timestamp := time.Now().Unix()
+	stmt, err := cxn.DB.Prepare("insert into " + DBConceptRelationship__table + " values(NULL, ?, ?, ?, ?, ?)")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	result, err := stmt.Exec(timestamp, id1, id2, string1, string2)
+	if err != nil {
+		return nil, err
+	}
+
+	return DBConceptRelationship__getByID(cxn, result.LastInsertID())
+}
+
 func (d *DBConceptRelationship) readRow(row sqlRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
@@ -24,6 +49,16 @@ func (d *DBConceptRelationship) readRow(row sqlRowInterface) error {
 		&d.F_string2,
 	)
 	return err
+}
+
+func DBConceptRelationship__getByID(cxn *Connection, id int) (*DBConceptRelationship, error) {
+	row := cxn.DB.QueryRow("select * from " + DBConcept__table + " where id = ?", id)
+	rel := DBConceptRelationship{}
+	err := rel.readRow(row)
+	if err != nil {
+		return nil, err
+	}
+	return &rel, nil
 }
 
 func DBConceptRelationship__getByConceptID(cxn *Connection, id int) (*[]DBConceptRelationship, error) {
@@ -42,6 +77,16 @@ func DBConceptRelationship__getByConceptID(cxn *Connection, id int) (*[]DBConcep
 	}
 
 	return &rels, nil
+}
+
+func DBConceptRelationship__getByIDsStrings(cxn *Connection, id1 int, id2 int, string1 string, string2 string) (*DBConceptRelationship, error) {
+	row := cxn.DB.QueryRow("select * from " + DBConceptRelationship__table + " where id1 = ? and id2 = ? and string1 = ? and string2 = ?", id1, id2, string1, string2)
+	rel := DBConceptRelationship{}
+	err := rel.readRow(row)
+	if err != nil {
+		return nil, err
+	}
+	return &rel, nil
 }
 
 func (d *DBConceptRelationship) LoadConcept(cxn *Connection, concept_id int) {

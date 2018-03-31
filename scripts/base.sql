@@ -18,6 +18,17 @@ CREATE TABLE `base_users` (
 	UNIQUE KEY(`username`)
 ) ENGINE=InnoDB;
 
+create table `base_api_keys` (
+	`id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+	`timestamp` int(11) NOT NULL,
+	`user_id` int(11) UNSIGNED NOT NULL,
+	`active` tinyint(1) NOT NULL,
+	`key` varchar(32) NOT NULL,
+	PRIMARY KEY (`id`),
+	UNIQUE KEY(`key`),
+	FOREIGN KEY(`user_id`) REFERENCES base_users(`id`)
+) ENGINE=InnoDB;
+
 create table `base_concepts` (
 	`id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`timestamp` int(11) NOT NULL,

@@ -15,6 +15,21 @@ type DBConceptData struct {
 	F_value string	`json:"value"`
 }
 
+func DBConceptData__create(cxn *Connection, concept_id int, key string, val string) (*DBConceptData, error) {
+	timestamp := time.Now().Unix()
+	stmt, err := cxn.DB.Prepare("insert into " + DBConceptData__table + " values(NULL, ?, ?, 1, ?, ?)")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	result, err := stmt.Exec(timestamp, concept_id, key, val)
+	if err != nil {
+		return nil, err
+	}
+
+	return DBConceptData__getByID(cxn, result.LastInsertId())
+}
+
 func (d *DBConceptData) readRow(row sqlRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
@@ -25,6 +40,18 @@ func (d *DBConceptData) readRow(row sqlRowInterface) error {
 		&d.F_value,
 	)
 	return err
+}
+
+func DBConceptData__getByID(cxn *Connection, id int) (*DBConceptData, error) {
+	row := cxn.DB.QueryRow("select * from " + DBConceptData__table + " where id = ?", id)
+
+	concept_data := DBConceptData{}
+	err := concept_data.readRow(row)
+	if err != nil {
+		return nil, errors.New("could not find concept data")
+	}
+
+	return &concept_data, nil
 }
 
 func DBConceptData__getByConceptID(cxn *Connection, concept_id int) (*[]DBConceptData, error) {

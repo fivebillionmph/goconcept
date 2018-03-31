@@ -2,6 +2,7 @@ package goconcept
 
 import (
 	"errors"
+	"time"
 )
 
 var DBConcept__table string = "base_concepts"
@@ -28,6 +29,31 @@ const DBConcept__TYPE_TOOL string = "tool"
 const DBConcept__TYPE_ENGINE string = "engine"
 
 /* create */
+
+func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConcept, error) {
+	row := cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type = ? and name = ?")
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return nil, err
+	}
+	if count > 0 {
+		return nil, errors.New("already exists")
+	}
+
+	timestamp := time.Now().Unix()
+	stmt, err := cxn.DB.Prepare("insert into " + DBConcept__table + " values(NULL, ?, 1, ?, ?)")
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	result, err := stmt.Exec(timestamp, type_name, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return DBConcept__getbyID(cxn, result.LastInsertId())
+}
 
 /* read */
 
