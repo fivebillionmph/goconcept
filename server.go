@@ -13,7 +13,7 @@ import (
 type Server struct {
 	http_server *http.ServerMux
 	Logger *log.Logger
-	cookie_store *CookieWrapper
+	cookie_wrapper *CookieWrapper
 	concept_types map[string]*ConceptType
 	concept_relationship_types []*ConceptRelationshipType
 	connection *Connection
@@ -21,22 +21,24 @@ type Server struct {
 }
 
 func NewServer(cookie_key string) (*Server, error) {
+	gob.Register(&SessionUser{})
+
 	logger = log.New(os.Stdout, "--- ", log.Ldate | log.Ltime | log.Lshortfile)
 	http_server := http.NewServerMux()
 	router := mux.NewRouter()
-	cookie_store := &CookieWrapper{sessions.NewCookieStore([]byte(cookie_key))}
+	cookie_wrapper := &CookieWrapper{sessions.NewCookieStore([]byte(cookie_key))}
 	concept_types := make(map[string]*ConceptType)
 	concept_relationship_types := []*ConceptRelationshipType{}
 	connection, err := newConnection(dbhost, dbuser, dbpassword, dbdatabase)
 	if err != nil {
 		return nil, err
 	}
-	api_handler := &APIHandler{router, cxn, cookie_store, logger}
-	return &Server{http_server, logger, cookie_store, concept_types, concept_relationship_types, connection, router}
+	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}
 }
 
-fun (s *Server) Run(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string) error {
+fun (s *Server) Run(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) error {
 	s.addAdminRoutes()
+	s.addUserRoutes(allow_user_create)
 	s.addStaticRouterPath(static_path, static_dir)
 	s.addHTMLRouterPath(admin_path, admin_html_file)
 	s.addHTMLRouterPath("/" html_file)

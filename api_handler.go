@@ -14,7 +14,7 @@ func (s *Server) AddRouterPath(path string, method string, handler func(http.Res
 	}
 
 	s.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		handler(w, r, s.connection, s.cookie_store)
+		handler(w, r, s.connection, s.cookie_cookie_wrapper)
 	}).Methods(method)
 
 	return nil
@@ -95,12 +95,11 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type_name string	`json:"type"`
 			Name string	`json:"name"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -134,12 +133,11 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type_name string `json:"type"`
 			Name string `json:"name"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -167,14 +165,13 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type_name string `json:"type"`
 			Name string `json:"name"`
 			Data_key string `json:"data_key"`
 			Data_value string `json:"data_value"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -230,14 +227,13 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type_name string `json:"type"`
 			Name string `json:"name"`
 			Data_key string `json:"data_key"`
 			Data_value string `json:"data_value"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(&body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -278,7 +274,6 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type1 string `json:"type1"`
 			Type2 string `json:"type2"`
@@ -287,7 +282,7 @@ func (s *Server) addAdminRoutes() {
 			String1 string `json:"string1"`
 			String2 string `json:"string2"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(&body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -332,7 +327,6 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
 		body_data := struct {
 			Type1 string `json:"type1"`
 			Type2 string `json:"type2"`
@@ -341,7 +335,7 @@ func (s *Server) addAdminRoutes() {
 			String1 string `json:"string1"`
 			String2 string `json:"string2"`
 		}{}
-		err := decoder.Decode(&body_data)
+		err := Util__requestJSONDecode(&body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -371,5 +365,90 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 		s.SendJSONRequest(w, r, true)
+	})
+}
+
+func (s *Server) addUserRoutes(allow_user_create bool) {
+	if allow_user_create {
+		s.AddRouterPath("/api/v1/user/register", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+			session, _ := cw.Get("base")
+			logged_in_user, _ := Util__getUserFromSession(session)
+			if logged_in_user != nil {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+
+			body_data := struct {
+				Email string `json:"email"`
+				Username string `json:"username"`
+				Password string `json:"password"`
+			}
+			err := Util__requestJSONDecode(r, &body_data)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+
+			user, err := DBUser__create(cxn, body_data.Email, body_data.Password, body_data.Username, 1)
+			if err != nil {
+				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+				return
+			}
+
+			session_user := Util__saveUserToSession(w, r, session, user)
+			s.SendJSONResponse(w, r, session_user)
+		})
+	}
+
+	s.AddRouterPath("/api/v1/user/login", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		session, _ := cw.Get("base")
+		logged_in_user, _ := Util__getUserFromSession(session)
+		if logged_in_user != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		body_data := struct {
+			Email string `json:"email"`
+			Password string `json:"password"`
+		}
+		err := Util__requestJSONDecode(r, &body_data)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		user, err := DBUser__getByPasswordChallenge(cxn, body_data.Email, body_data.Password)
+		if err != nil {
+			http.Error(w, "email password combination does not exist", http.StatusBadRequest)
+			return
+		}
+
+		session_user := Util__saveUserToSession(w, r, session, user)
+		s.SendJSONResponse(w, r, session_user)
+	})
+
+	s.AddRouterPath("/api/v1/user/logout", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		session, _ := cw.Get("base")
+		logged_in_user, _ := Util__getUserFromSession(session)
+		if logged_in_user == nil {
+			http.Error(w, "not logged in", http.StatusBadRequest)
+			return
+		}
+
+		delete(session.Values, "user")
+		session.Save(r, w)
+		s.SendJSONRespose(w, r, true)
+	})
+
+	s.AddRouterPath("/api/v1/user/info", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		session, _ := cw.Get("base")
+		logged_in_user, _ := Util__getUserFromSession(session)
+		if logged_in_user == nil {
+			http.Error(w, "not logged in", http.StatusBadRequest)
+			return
+		}
+
+		s.SendJSONResponse(w, r, logged_in_user)
 	})
 }

@@ -51,6 +51,7 @@ func DBUser__create(cxn *Connection, email string, password_plaintext string, us
 	if err != nil {
 		return nil, errors.New("db error")
 	}
+	defer stmt.Close()
 
 	res, err := stmt.Exec(time, email, password, username, level, active)
 	if err != nil {
@@ -62,11 +63,11 @@ func DBUser__create(cxn *Connection, email string, password_plaintext string, us
 		return nil, errors.New("db error")
 	}
 
-	return DBUser__getById(cxn, int(id))
+	return DBUser__getByID(cxn, int(id))
 }
 
 /* read */
-func DBUser__getById(cxn *Connection, id int) (*DBUser, error) {
+func DBUser__getByID(cxn *Connection, id int) (*DBUser, error) {
 	row := cxn.DB.QueryRow("select * from " + DBUser_table + " where id=?", id)
 
 	user := DBUser{}
@@ -103,7 +104,7 @@ func DBUser__getByPasswordChallenge(cxn *Connection, email string, password_plai
 		return nil, err
 	}
 
-	return DBUser__getById(cxn, id)
+	return DBUser__getByID(cxn, id)
 }
 
 /* update */

@@ -35,8 +35,12 @@ func DBConceptRelationship__create(cxn *Connection, id1 int, id2 int, string1 st
 	if err != nil {
 		return nil, err
 	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
 
-	return DBConceptRelationship__getByID(cxn, result.LastInsertID())
+	return DBConceptRelationship__getByID(cxn, int(id))
 }
 
 func (d *DBConceptRelationship) readRow(row sqlRowInterface) error {

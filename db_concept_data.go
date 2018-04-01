@@ -26,8 +26,12 @@ func DBConceptData__create(cxn *Connection, concept_id int, key string, val stri
 	if err != nil {
 		return nil, err
 	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
 
-	return DBConceptData__getByID(cxn, result.LastInsertId())
+	return DBConceptData__getByID(cxn, int(id))
 }
 
 func (d *DBConceptData) readRow(row sqlRowInterface) error {

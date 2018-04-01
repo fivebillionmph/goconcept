@@ -51,8 +51,12 @@ func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConce
 	if err != nil {
 		return nil, err
 	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
 
-	return DBConcept__getbyID(cxn, result.LastInsertId())
+	return DBConcept__getbyID(cxn, int(id))
 }
 
 /* read */
