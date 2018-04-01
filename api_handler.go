@@ -470,6 +470,28 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 	})
 
 	s.AddRouterPath("/api/v1/user/keys/add", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		session, := cw.Get("base")
+		user, _ := Util__getUserFromSession(session)
+		if user == nil {
+			http.Error(w, "not logged in", http.StatusBadRequest)
+			return
+		}
 
+		existing_count, err := DBAPIKey__getCountByUserID(cxn, user.F_id, true)
+		if err = nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		if existing_count > DBAPIKey__user_max {
+			http.Error(w, "max number of keys reached", http.StatusBadRequest)
+			return
+		}
+
+		key, err := DBAPIKey__create(cxn, user)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+		s.SendJSONResponse(w, r, key)
 	})
 }

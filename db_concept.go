@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-var DBConcept__table string = "base_concepts"
+const DBConcept__table string = "base_concepts"
 
 type DBConcept struct {
 	F_id int	`json:"-"`
@@ -22,11 +22,6 @@ type DBConcept__Relationship struct {
 	Concept *DBConcept	`json:"item"`
 	Reltype string `json:"reltype"`
 }
-
-const DBConcept__TYPE_PAGE string = "page"
-const DBConcept__TYPE_PROGRAMMING_LANGUAGE string = "programming-language"
-const DBConcept__TYPE_TOOL string = "tool"
-const DBConcept__TYPE_ENGINE string = "engine"
 
 /* create */
 

@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
-var DBAPIKey__table string = "base_api_keys"
-var DBAPIKey__keylen int = 32
+const DBAPIKey__table string = "base_api_keys"
+const DBAPIKey__keylen int = 32
+const DBAPIKey__user_max int = 2
 
 type DBAPIKey struct {
 	F_id int	`json:"-"`
@@ -94,8 +95,22 @@ func DBAPIKey__getByUserID(cxn *Connection, user_id int) (*[]DBAPIKey, error) {
 	return &keys, nil
 }
 
-func DBAPIKey__getCountByUserID(cxn *Connection, user_id int) (int, error) {
+func DBAPIKey__getCountByUserID(cxn *Connection, user_id int, active_only bool) (int, error) {
+	var active_only_str string
+	if active_only {
+		active_only_str = " and active = 1"
+	} else {
+		active_only_str = ""
+	}
+	row := cxn.DB.QueryRow("select count(*) from " + DBAPIKey__table + " where user_id = ?" + active_only_str, user_id)
 
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
 }
 
 func (d *DBAPIKey) deactive() error {

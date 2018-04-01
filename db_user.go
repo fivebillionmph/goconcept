@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-var DBUser__table string = "base_users"
+const DBUser__table string = "base_users"
 
 type DBUser struct {
 	F_id int `json:"-"`

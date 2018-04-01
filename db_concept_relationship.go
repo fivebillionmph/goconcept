@@ -1,6 +1,6 @@
 package goconcept
 
-var DBConceptRelationship__table string = "base_concept_relationships"
+const DBConceptRelationship__table string = "base_concept_relationships"
 
 type DBConceptRelationship struct {
 	F_id int

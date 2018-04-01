@@ -4,7 +4,7 @@ import (
 	"errors"
 )
 
-var DBConceptData__table string = "base_concept_data"
+const DBConceptData__table string = "base_concept_data"
 
 type DBConceptData struct {
 	F_id int	`json:"-"`
