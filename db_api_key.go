@@ -9,11 +9,11 @@ var DBAPIKey__table string = "base_api_keys"
 var DBAPIKey__keylen int = 32
 
 type DBAPIKey struct {
-	F_id int
-	F_user_id int
-	F_timestamp int
-	F_active int
-	F_key string
+	F_id int	`json:"-"`
+	F_user_id int	`json:"-"`
+	F_timestamp int	`json:"-"`
+	F_active int	`json:"active"`
+	F_key string	`json:"key"`
 }
 
 func DBAPIKey__create(cxn *Connection, user *DBUser) (*DBAPIKey, error) {
@@ -74,6 +74,28 @@ func DBAPIKey__getByKey(cxn *Connection, key string) (*DBAPIKey, error) {
 		return nil, err
 	}
 	return &key, nil
+}
+
+func DBAPIKey__getByUserID(cxn *Connection, user_id int) (*[]DBAPIKey, error) {
+	rows, err := cxn.DB.Query("select * from " + DBAPIKey__table + " where user_id = ?", user_id)
+	if err != nil {
+		return nil, err
+	}
+
+	var keys []DBAPIKey;
+	for rows.Next() {
+		key := DBAPIKey{}
+		err := key.readRow(rows)
+		if err == nil {
+			keys = append(keys, key)
+		}
+	}
+
+	return &keys, nil
+}
+
+func DBAPIKey__getCountByUserID(cxn *Connection, user_id int) (int, error) {
+
 }
 
 func (d *DBAPIKey) deactive() error {

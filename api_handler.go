@@ -451,4 +451,25 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 
 		s.SendJSONResponse(w, r, logged_in_user)
 	})
+
+	s.AddRouterPath("/api/v1/user/keys", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		session, _ := cw.Get("base")
+		user, _ := Util__getUserFromSession(session)
+		if user == nil {
+			http.Error(w, "not logged in", http.StatusBadRequest)
+			return
+		}
+
+		api_keys, err := DBAPIKey__getByUserID(cxn, user.id)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		s.SendJSONResponse(w, r, api_keys)
+	})
+
+	s.AddRouterPath("/api/v1/user/keys/add", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+
+	})
 }
