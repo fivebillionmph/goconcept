@@ -47,7 +47,7 @@ func DBUser__create(cxn *Connection, email string, password_plaintext string, us
 
 	active := 1
 
-	stmt, err := cxn.DB.Prepare("INSERT INTO " +  DBUser_table + " values(NULL, ?, ?, ?, ?, ?, ?)")
+	stmt, err := cxn.DB.Prepare("INSERT INTO " +  DBUser__table + " values(NULL, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return nil, errors.New("db error")
 	}
@@ -68,7 +68,7 @@ func DBUser__create(cxn *Connection, email string, password_plaintext string, us
 
 /* read */
 func DBUser__getByID(cxn *Connection, id int) (*DBUser, error) {
-	row := cxn.DB.QueryRow("select * from " + DBUser_table + " where id=?", id)
+	row := cxn.DB.QueryRow("select * from " + DBUser__table + " where id=?", id)
 
 	user := DBUser{}
 	err := row.Scan(

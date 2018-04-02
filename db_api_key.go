@@ -3,11 +3,13 @@ package goconcept
 import (
 	"crypto/rand"
 	"time"
+	"encoding/base64"
 )
 
 const DBAPIKey__table string = "base_api_keys"
 const DBAPIKey__keylen int = 32
 const DBAPIKey__user_max int = 2
+const DBAPIKey__header_name string = "X-api-key"
 
 type DBAPIKey struct {
 	F_id int	`json:"-"`
@@ -43,10 +45,10 @@ func DBAPIKey__create(cxn *Connection, user *DBUser) (*DBAPIKey, error) {
 		return nil, err
 	}
 
-	return DBUser__getByID(cxn, int(id))
+	return DBAPIKey__getByID(cxn, int(id))
 }
 
-func (d *DBAPIKey) readRow(row sqlRowInterface) error {
+func (d *DBAPIKey) readRow(row SQLRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
 		&d.F_user_id,
@@ -67,8 +69,8 @@ func DBAPIKey__getByID(cxn *Connection, id int) (*DBAPIKey, error) {
 	return &key, nil
 }
 
-func DBAPIKey__getByKey(cxn *Connection, key string) (*DBAPIKey, error) {
-	row := cxn.DB.QueryRow("select * from " + DBAPIKey__table + " where BINARY key = ?", key)
+func DBAPIKey__getByKey(cxn *Connection, key_str string) (*DBAPIKey, error) {
+	row := cxn.DB.QueryRow("select * from " + DBAPIKey__table + " where BINARY key = ?", key_str)
 	key := DBAPIKey{}
 	err := key.readRow(row)
 	if err != nil {
@@ -113,13 +115,13 @@ func DBAPIKey__getCountByUserID(cxn *Connection, user_id int, active_only bool) 
 	return count, nil
 }
 
-func (d *DBAPIKey) deactive() error {
+func (d *DBAPIKey) deactive(cxn *Connection) error {
 	stmt, err := cxn.DB.Prepare("update " + DBAPIKey__table + " set active = 0 where id = ?")
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer stmt.Close()
-	_, err := stmt.Exec(d.F_id)
+	_, err = stmt.Exec(d.F_id)
 	if err != nil {
 		return err
 	}

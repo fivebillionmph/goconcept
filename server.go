@@ -7,11 +7,11 @@ import (
 	"github.com/gorilla/mux"
 	"encoding/gob"
 	"log"
-	"strconv"
+	"os"
 )
 
 type Server struct {
-	http_server *http.ServerMux
+	http_server *http.ServeMux
 	Logger *log.Logger
 	cookie_wrapper *CookieWrapper
 	concept_types map[string]*ConceptType
@@ -20,11 +20,11 @@ type Server struct {
 	router *mux.Router
 }
 
-func NewServer(cookie_key string) (*Server, error) {
+func NewServer(cookie_key string, dbhost string, dbuser string, dbpassword string, dbdatabase string) (*Server, error) {
 	gob.Register(&SessionUser{})
 
-	logger = log.New(os.Stdout, "--- ", log.Ldate | log.Ltime | log.Lshortfile)
-	http_server := http.NewServerMux()
+	logger := log.New(os.Stdout, "--- ", log.Ldate | log.Ltime | log.Lshortfile)
+	http_server := http.NewServeMux()
 	router := mux.NewRouter()
 	cookie_wrapper := &CookieWrapper{sessions.NewCookieStore([]byte(cookie_key))}
 	concept_types := make(map[string]*ConceptType)
@@ -33,19 +33,20 @@ func NewServer(cookie_key string) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}
+	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}, nil
 }
 
-fun (s *Server) Run(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) error {
+func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) error {
 	s.addAdminRoutes()
 	s.addUserRoutes(allow_user_create)
 	s.addStaticRouterPath(static_path, static_dir)
 	s.addHTMLRouterPath(admin_path, admin_html_file)
-	s.addHTMLRouterPath("/" html_file)
-}
+	s.addHTMLRouterPath("/", html_file)
+	s.http_server.Handle("/", s.router)
 
-func (s *Server) Start() error {
 	s.Logger.Println("starting server")
+	err := http.ListenAndServe(":8080", s.http_server)
+	return err
 }
 
 func (s *Server) AddConceptType(concept_type *ConceptType) error {
@@ -53,10 +54,10 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 		return errors.New("nil concept type")
 	}
 	for _, ct := range s.concept_types {
-		if ct.type_name == concept_type.Type_name {
+		if ct.Type_name == concept_type.Type_name {
 			return errors.New("duplicate concept name")
 		}
-		if ct.pathname != "" && ct.pathname == concept_type.Pathname {
+		if ct.Pathname != "" && ct.Pathname == concept_type.Pathname {
 			return errors.New("duplicate pathname")
 		}
 	}
@@ -68,12 +69,12 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 			name := vars["name"]
 			concept, err := DBConcept__getByTypeName(cxn, concept_type.Type_name, name)
 			if err != nil {
-				s.Logger(err)
+				s.Logger.Println(err)
 				http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 				return
 			}
 
-			concept.LoadRelationships()
+			concept.LoadRelationships(s.connection)
 
 			s.SendJSONResponse(w, r, concept)
 		}
@@ -85,14 +86,14 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 			offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
 			concepts, err := DBConcept__getByType(cxn, concept_type.Type_name, offset, count)
 			if err != nil {
-				s.Logger(err)
+				s.Logger.Println(err)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 				return
 			}
 
 			s.SendJSONResponse(w, r, concepts)
 		}
-		s.AddRouterPath("/api/v1/c/" + concept_type.Pathname), "GET", many_endpoint_handler)
+		s.AddRouterPath("/api/v1/c/" + concept_type.Pathname, "GET", many_endpoint_handler)
 	}
 
 	return nil
@@ -103,26 +104,26 @@ func (s *Server) AddConceptRelationshipType(concept_relationship_type *ConceptRe
 		return errors.New("nil concept relationship type")
 	}
 	for _, crt := range s.concept_relationship_types {
-		if crt.type1 == concept_relationship_type.Type1 &&
-			crt.type2 == concept_relationship_type.Type2 &&
-			crt.string1 == concept_relationship_type.String1 &&
-			crt.string2 == concept_relationship_type.String2 {
+		if crt.Type1 == concept_relationship_type.Type1 &&
+			crt.Type2 == concept_relationship_type.Type2 &&
+			crt.String1 == concept_relationship_type.String1 &&
+			crt.String2 == concept_relationship_type.String2 {
 			return errors.New("duplicate concept relationship type")
 		}
 	}
 	type1_found := false
 	type2_found := false
 	for _, ct := range s.concept_types {
-		if ct.type_name == concept_relationship_type.Type1 {
-			type1 = true
-		} else if ct.type_name == concept_relationship_type.Type2 {
-			type2 = true
+		if ct.Type_name == concept_relationship_type.Type1 {
+			type1_found = true
+		} else if ct.Type_name == concept_relationship_type.Type2 {
+			type2_found = true
 		}
-		if type1 && type2 {
+		if type1_found && type2_found {
 			break
 		}
 	}
-	if !type1 || !type2 {
+	if !type1_found || !type2_found {
 		return errors.New("invalid relationship type")
 	}
 	s.concept_relationship_types = append(s.concept_relationship_types, concept_relationship_type)

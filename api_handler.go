@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"github.com/gorilla/mux"
 	"errors"
-	"log"
 	"encoding/json"
 )
 
@@ -14,7 +13,7 @@ func (s *Server) AddRouterPath(path string, method string, handler func(http.Res
 	}
 
 	s.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		handler(w, r, s.connection, s.cookie_cookie_wrapper)
+		handler(w, r, s.connection, s.cookie_wrapper)
 	}).Methods(method)
 
 	return nil
@@ -47,13 +46,13 @@ func (s *Server) addAdminRoutes() {
 	s.AddRouterPath("/api/v1/ca/concept/types", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
-		types := []string
+		types := []string{}
 		for type_name, _ := range s.concept_types {
-			types = append(types, *type_name)
+			types = append(types, type_name)
 		}
 
 		s.SendJSONResponse(w, r, &types)
@@ -62,26 +61,26 @@ func (s *Server) addAdminRoutes() {
 	s.AddRouterPath("/api/v1/ca/concept/types/{typename}", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
 		vars := mux.Vars(r)
 		typename := vars["typename"]
-		concept_type, ok := concept_types[typename]
+		concept_type, ok := s.concept_types[typename]
 		if !ok {
-			s.Logger.Printf("%+v\n", err)
+			s.Logger.Printf("invalid concept type: %s\n", typename)
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}
 
-		s.SendJSONRequest(w,r, concept_type)
+		s.SendJSONResponse(w, r, concept_type)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/relationships", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -91,7 +90,7 @@ func (s *Server) addAdminRoutes() {
 	s.AddRouterPath("/api/v1/ca/concept/add", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -123,13 +122,13 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		s.SendJSONRequest(new_concept)
+		s.SendJSONResponse(w, r, new_concept)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/delete", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -155,13 +154,13 @@ func (s *Server) addAdminRoutes() {
 			s.Logger.Println("%+v\n", err)
 			return
 		}
-		s.SendJSONRequest(w, r, true)
+		s.SendJSONResponse(w, r, true)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/add/data", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -186,7 +185,7 @@ func (s *Server) addAdminRoutes() {
 		var server_concept_data *ConceptData = nil
 		for _, cd := range server_type.Concept_data {
 			if cd.Type_name == body_data.Data_key {
-				server_concept_data = cd
+				server_concept_data = &cd
 				break
 			}
 		}
@@ -195,10 +194,14 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		concept_type := DBConcept__getByTypeName(cxn, body_data.Type_name, body_data.Name)
+		concept_type, err := DBConcept__getByTypeName(cxn, body_data.Type_name, body_data.Name)
+		if err != nil {
+			http.Error(w, "type does not exist", http.StatusBadRequest)
+			return
+		}
 
 		if server_concept_data.Single {
-			for _, data := range concept_type.Data {
+			for _, data := range *concept_type.Data {
 				if data.F_key == server_concept_data.Type_name {
 					http.Error(w, "data key already exists", http.StatusBadRequest)
 					return
@@ -206,24 +209,24 @@ func (s *Server) addAdminRoutes() {
 			}
 		}
 
-		if !server_concept_data.Approve_func(Data_value) {
+		if !server_concept_data.Approve_func(body_data.Data_value) {
 			http.Error(w, "data is not valid", http.StatusBadRequest)
 			return
 		}
 
-		new_concept_data, err := DBConceptData__create(cxn, concept_type.F_id, body_data.Key, body_data.Value)
+		new_concept_data, err := DBConceptData__create(cxn, concept_type.F_id, body_data.Data_key, body_data.Data_value)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		s.SendJSONRequest(w, r, new_concept_data)
+		s.SendJSONResponse(w, r, new_concept_data)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/delete/data", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -233,7 +236,7 @@ func (s *Server) addAdminRoutes() {
 			Data_key string `json:"data_key"`
 			Data_value string `json:"data_value"`
 		}{}
-		err := Util__requestJSONDecode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -245,10 +248,10 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		var concept_data DBConceptData
-		for _, cd := range concept_type.Data {
+		var concept_data *DBConceptData
+		for _, cd := range *concept_type.Data {
 			if cd.F_key == body_data.Data_key && cd.F_value == body_data.Data_value {
-				concept_data == cd
+				concept_data = &cd
 				break
 			}
 		}
@@ -264,13 +267,13 @@ func (s *Server) addAdminRoutes() {
 			s.Logger.Println("%+v\n", err)
 			return
 		}
-		s.SendJSONRequest(w, r, true)
+		s.SendJSONResponse(w, r, true)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/add/rel", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -282,7 +285,7 @@ func (s *Server) addAdminRoutes() {
 			String1 string `json:"string1"`
 			String2 string `json:"string2"`
 		}{}
-		err := Util__requestJSONDecode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -295,7 +298,7 @@ func (s *Server) addAdminRoutes() {
 				break
 			}
 		}
-		if server_relationshp == nil {
+		if server_relationship == nil {
 			http.Error(w, "invalid type and string combination", http.StatusBadRequest)
 			return
 		}
@@ -311,19 +314,19 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		new_relationship, err := DBConceptRelationship__create(cxn, db_concept1.F_id, db_concept2.F_id, body_data.string1, body_data_string2)
+		new_relationship, err := DBConceptRelationship__create(cxn, db_concept1.F_id, db_concept2.F_id, body_data.String1, body_data.String2)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
 
-		s.SendJSONRequest(w, r, new_relationship)
+		s.SendJSONResponse(w, r, new_relationship)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/delete/rel", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-			s.Logger("unauthorized admin request")
+			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
@@ -335,7 +338,7 @@ func (s *Server) addAdminRoutes() {
 			String1 string `json:"string1"`
 			String2 string `json:"string2"`
 		}{}
-		err := Util__requestJSONDecode(&body_data)
+		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -364,14 +367,14 @@ func (s *Server) addAdminRoutes() {
 			s.Logger.Println("%+v\n", err)
 			return
 		}
-		s.SendJSONRequest(w, r, true)
+		s.SendJSONResponse(w, r, true)
 	})
 }
 
 func (s *Server) addUserRoutes(allow_user_create bool) {
 	if allow_user_create {
 		s.AddRouterPath("/api/v1/user/register", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-			session, _ := cw.Get("base")
+			session, _ := cw.Get(r, "base")
 			logged_in_user, _ := Util__getUserFromSession(session)
 			if logged_in_user != nil {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -382,7 +385,7 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 				Email string `json:"email"`
 				Username string `json:"username"`
 				Password string `json:"password"`
-			}
+			}{}
 			err := Util__requestJSONDecode(r, &body_data)
 			if err != nil {
 				http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -401,7 +404,7 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 	}
 
 	s.AddRouterPath("/api/v1/user/login", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		session, _ := cw.Get("base")
+		session, _ := cw.Get(r, "base")
 		logged_in_user, _ := Util__getUserFromSession(session)
 		if logged_in_user != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -411,7 +414,7 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 		body_data := struct {
 			Email string `json:"email"`
 			Password string `json:"password"`
-		}
+		}{}
 		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
@@ -429,7 +432,7 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 	})
 
 	s.AddRouterPath("/api/v1/user/logout", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		session, _ := cw.Get("base")
+		session, _ := cw.Get(r, "base")
 		logged_in_user, _ := Util__getUserFromSession(session)
 		if logged_in_user == nil {
 			http.Error(w, "not logged in", http.StatusBadRequest)
@@ -438,11 +441,11 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 
 		delete(session.Values, "user")
 		session.Save(r, w)
-		s.SendJSONRespose(w, r, true)
+		s.SendJSONResponse(w, r, true)
 	})
 
 	s.AddRouterPath("/api/v1/user/info", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		session, _ := cw.Get("base")
+		session, _ := cw.Get(r, "base")
 		logged_in_user, _ := Util__getUserFromSession(session)
 		if logged_in_user == nil {
 			http.Error(w, "not logged in", http.StatusBadRequest)
@@ -453,14 +456,14 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 	})
 
 	s.AddRouterPath("/api/v1/user/keys", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		session, _ := cw.Get("base")
+		session, _ := cw.Get(r, "base")
 		user, _ := Util__getUserFromSession(session)
 		if user == nil {
 			http.Error(w, "not logged in", http.StatusBadRequest)
 			return
 		}
 
-		api_keys, err := DBAPIKey__getByUserID(cxn, user.id)
+		api_keys, err := DBAPIKey__getByUserID(cxn, user.Id)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
@@ -470,15 +473,15 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 	})
 
 	s.AddRouterPath("/api/v1/user/keys/add", "POST", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		session, := cw.Get("base")
+		session, _ := cw.Get(r, "base")
 		user, _ := Util__getUserFromSession(session)
 		if user == nil {
 			http.Error(w, "not logged in", http.StatusBadRequest)
 			return
 		}
 
-		existing_count, err := DBAPIKey__getCountByUserID(cxn, user.F_id, true)
-		if err = nil {
+		existing_count, err := DBAPIKey__getCountByUserID(cxn, user.Id, true)
+		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -487,7 +490,13 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 			return
 		}
 
-		key, err := DBAPIKey__create(cxn, user)
+		db_user, err := DBUser__getByID(cxn, user.Id)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
+
+		key, err := DBAPIKey__create(cxn, db_user)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return

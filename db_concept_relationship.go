@@ -1,5 +1,10 @@
 package goconcept
 
+import (
+	"errors"
+	"time"
+)
+
 const DBConceptRelationship__table string = "base_concept_relationships"
 
 type DBConceptRelationship struct {
@@ -43,7 +48,7 @@ func DBConceptRelationship__create(cxn *Connection, id1 int, id2 int, string1 st
 	return DBConceptRelationship__getByID(cxn, int(id))
 }
 
-func (d *DBConceptRelationship) readRow(row sqlRowInterface) error {
+func (d *DBConceptRelationship) readRow(row SQLRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
 		&d.F_timestamp,
@@ -113,7 +118,6 @@ func (d *DBConceptRelationship) LoadConcept(cxn *Connection, concept_id int) {
 
 	concept, err := DBConcept__getByID(cxn, id)
 	if err != nil {
-		logger.Println(err)
 		return
 	}
 
@@ -125,16 +129,16 @@ func (d *DBConceptRelationship) LoadConcept(cxn *Connection, concept_id int) {
 }
 
 func DBConceptRelationship__delete(cxn *Connection, relationship *DBConceptRelationship) error {
-	if relationships == nil {
+	if relationship == nil {
 		return errors.New("nil relationship")
 	}
 
-	stmt, err := cxn.Prepare("delete from " + DBConceptRelationship__table + " where id=?")
+	stmt, err := cxn.DB.Prepare("delete from " + DBConceptRelationship__table + " where id=?")
 	if err != nil {
 		return err
 	}
 
-	res, err := stmt.Exec(relationship.F_id)
+	_, err = stmt.Exec(relationship.F_id)
 	if err != nil {
 		return err
 	}

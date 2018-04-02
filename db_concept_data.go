@@ -2,6 +2,7 @@ package goconcept
 
 import (
 	"errors"
+	"time"
 )
 
 const DBConceptData__table string = "base_concept_data"
@@ -34,7 +35,7 @@ func DBConceptData__create(cxn *Connection, concept_id int, key string, val stri
 	return DBConceptData__getByID(cxn, int(id))
 }
 
-func (d *DBConceptData) readRow(row sqlRowInterface) error {
+func (d *DBConceptData) readRow(row SQLRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
 		&d.F_timestamp,
@@ -81,12 +82,12 @@ func DBConceptData__delete(cxn *Connection, concept_data *DBConceptData) error {
 		return errors.New("nil concept_data")
 	}
 
-	stmt, err := cxn.Prepare("delete from " + DBConceptData__table + " where id=?")
+	stmt, err := cxn.DB.Prepare("delete from " + DBConceptData__table + " where id=?")
 	if err != nil {
 		return err
 	}
 
-	res, err := stmt.Exec(concept_data.F_id)
+	_, err = stmt.Exec(concept_data.F_id)
 	if err != nil {
 		return err
 	}

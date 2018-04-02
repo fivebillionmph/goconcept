@@ -15,6 +15,6 @@ type CookieWrapper struct {
 	store *sessions.CookieStore
 }
 
-func (cw *CookieWrapper) Get(r *http.Request, session_name string) (*sessions.CookieSession, error) {
+func (cw *CookieWrapper) Get(r *http.Request, session_name string) (*sessions.Session, error) {
 	return cw.store.Get(r, session_name)
 }

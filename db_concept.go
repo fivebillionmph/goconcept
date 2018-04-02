@@ -51,12 +51,12 @@ func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConce
 		return nil, err
 	}
 
-	return DBConcept__getbyID(cxn, int(id))
+	return DBConcept__getByID(cxn, int(id))
 }
 
 /* read */
 
-func (d *DBConcept) readRow(row sqlRowInterface) error {
+func (d *DBConcept) readRow(row SQLRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
 		&d.F_timestamp,
@@ -124,27 +124,30 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 	var err error
 
 	concept.LoadData(cxn)
-	for _, d := range concept.Data {
-		err = DBConceptData__delete(d)
+	for _, d := range *concept.Data {
+		err = DBConceptData__delete(cxn, &d)
 		if err != nil {
 			return err
 		}
 	}
 
-	concept.LoadRelationships(cxn)
-	for _, r := range concept.Relationships {
-		err = DBConceptRelationship__delete(r)
+	relationships, err := DBConceptRelationship__getByConceptID(cxn, concept.F_id)
+	if err != nil {
+		return err
+	}
+	for _, r := range *relationships {
+		err = DBConceptRelationship__delete(cxn, &r)
 		if err != nil {
 			return err
 		}
 	}
 
-	stmt, err := cxn.Prepare("delete from " + DBConcept__table + " where id=?")
+	stmt, err := cxn.DB.Prepare("delete from " + DBConcept__table + " where id=?")
 	if err != nil {
 		return err
 	}
 
-	res, err := stmt.Exec(concept.F_id)
+	_, err = stmt.Exec(concept.F_id)
 	if err != nil {
 		return err
 	}
@@ -186,7 +189,6 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 
 	relationships, err := DBConceptRelationship__getByConceptID(cxn, d.F_id)
 	if err != nil {
-		logger.Println(err)
 		return
 	}
 

@@ -28,7 +28,7 @@ func NewConceptType(name string, concept_data []ConceptData, api_available bool,
 	var real_pathname string
 	if api_available {
 		if pathname != "" {
-			return (nil, errors.New("invalid pathname"))
+			return nil, errors.New("invalid pathname")
 		}
 		real_pathname = pathname
 	} else {
@@ -43,12 +43,12 @@ func NewConceptType(name string, concept_data []ConceptData, api_available bool,
 	for _, cd := range concept_data {
 		_, ok := used_names[cd.Type_name]
 		if ok {
-			return (nil, errors.New("name used twice"))
+			return nil, errors.New("name used twice")
 		}
 		used_names[cd.Type_name] = true
 	}
 
-	return &ConceptType{name, concept_data, api_available, pathname}, nil
+	return &ConceptType{name, concept_data, real_pathname, api_available}, nil
 }
 
 func NewConceptData(name string, approve_func *func(str string) bool, single bool) (*ConceptData, error) {
@@ -70,7 +70,7 @@ func NewConceptData(name string, approve_func *func(str string) bool, single boo
 
 func NewConceptRelationshipType(type1 string, type2 string, string1 string, string2 string) (*ConceptRelationshipType, error) {
 	if type1 == "" || type2 == "" || string1 == "" || string2 == "" {
-		return (nil, errors.New("invalid concept relationship type"))
+		return nil, errors.New("invalid concept relationship type")
 	}
 
 	return &ConceptRelationshipType{type1, type2, string1, string2}, nil

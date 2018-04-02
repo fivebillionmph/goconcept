@@ -3,10 +3,10 @@ package goconcept
 import (
 	"errors"
 	"net/url"
-	"strconv"
 	"net/http"
 	"encoding/json"
 	"github.com/gorilla/sessions"
+	"strconv"
 )
 
 func Util__queryToInt(vars url.Values, var_name string, min int, max int, min_inf bool, max_inf bool, default_value int) int {
@@ -17,7 +17,10 @@ func Util__queryToInt(vars url.Values, var_name string, min int, max int, min_in
 	if len(val_str) < 1 {
 		return default_value
 	}
-	val_int, err := strcon.Atoi(val_str[0])
+	val_int, err := strconv.Atoi(val_str[0])
+	if err != nil {
+		return default_value
+	}
 	if !min_inf && val_int < min {
 		return default_value
 	}
@@ -33,16 +36,22 @@ func Util__requestJSONDecode(r *http.Request, s interface{}) error {
 	return err
 }
 
-func Util__getUserFromSession(session *sessions.CookieStore) (*SessionUser, error) {
-	user, ok := session.Values["user"]
+func Util__getUserFromSession(session *sessions.Session) (*SessionUser, error) {
+	user_interface, ok := session.Values["user"]
 	if !ok {
-		return nil errors.New("no user")
+		return nil, errors.New("no user")
+	}
+
+	user, ok := user_interface.(*SessionUser)
+	if !ok {
+		return nil, errors.New("invalid stored type")
 	}
 	return user, nil
 }
 
-func Util__saveUserToSession(w http.ResponseWriter, r *http.Request, session *sessions.CookieStore, user *DBUser) (*SessionUser) {
-	session_user := &SessionUser{user.F_id, user.F_username, user.F_level}
-	session["user"] = session_user
+func Util__saveUserToSession(w http.ResponseWriter, r *http.Request, session *sessions.Session, user *DBUser) *SessionUser {
+	session_user := &SessionUser{user.F_id, user.F_username, int(user.F_level)}
+	session.Values["user"] = session_user
 	session.Save(r, w)
+	return session_user
 }
