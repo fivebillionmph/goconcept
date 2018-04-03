@@ -36,7 +36,7 @@ func NewServer(cookie_key string, dbhost string, dbuser string, dbpassword strin
 	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}, nil
 }
 
-func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) error {
+func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) {
 	s.addAdminRoutes()
 	s.addUserRoutes(allow_user_create)
 	s.addStaticRouterPath(static_path, static_dir)
@@ -44,9 +44,12 @@ func (s *Server) Start(static_path string, static_dir string, html_file string, 
 	s.addHTMLRouterPath("/", html_file)
 	s.http_server.Handle("/", s.router)
 
-	s.Logger.Println("starting server")
-	err := http.ListenAndServe(":8080", s.http_server)
-	return err
+	go func() {
+		s.Logger.Println("starting server")
+		_ = http.ListenAndServe(":8080", s.http_server)
+	}()
+
+	serverCommands(s)
 }
 
 func (s *Server) AddConceptType(concept_type *ConceptType) error {

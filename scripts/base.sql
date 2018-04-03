@@ -1,12 +1,13 @@
-DROP TABLE IF EXISTS `base_users`;
 drop table if exists `base_concept_relationships`;
 drop table if exists `base_concepts_history`;
 drop table if exists `base_concept_data`;
 drop table if exists `base_concepts`;
+drop table if exists `base_api_keys`;
+drop table if exists `base_users`;
 
 
 CREATE TABLE `base_users` (
-	`id` INT(11) NOT NULL AUTO_INCREMENT,
+	`id` INT(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 	`timestamp` INT(11) NOT NULL,
 	`email` VARCHAR(128) NOT NULL,
 	`password` VARCHAR(64) NOT NULL,
@@ -47,7 +48,7 @@ create table `base_concept_data` (
 	`key` varchar(64) NOT NULL,
 	`value` LONGTEXT,
 	PRIMARY KEY(`id`),
-	FOREIGN KEY(`concept_id`) REFERENCES concepts(`id`)
+	FOREIGN KEY(`concept_id`) REFERENCES base_concepts(`id`)
 ) ENGINE=InnoDB;
 
 create table `base_concepts_history` (
@@ -68,7 +69,7 @@ create table `base_concept_relationships` (
 	`string1` varchar(64),
 	`string2` varchar(64),
 	PRIMARY KEY(`id`),
-	FOREIGN KEY(`id1`) REFERENCES concepts(`id`),
-	FOREIGN KEY(`id2`) REFERENCES concepts(`id`),
+	FOREIGN KEY(`id1`) REFERENCES base_concepts(`id`),
+	FOREIGN KEY(`id2`) REFERENCES base_concepts(`id`),
 	UNIQUE KEY(`id1`, `id2`, `string1`, `string2`)
 ) ENGINE=InnoDB;

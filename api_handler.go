@@ -20,7 +20,7 @@ func (s *Server) AddRouterPath(path string, method string, handler func(http.Res
 }
 
 func (s *Server) addStaticRouterPath(path string, dir string) error {
-	s.router.PathPrefix("/" + path).Handler(http.StripPrefix("/" + path + "/", http.FileServer(http.Dir("./" + dir + "/"))))
+	s.router.PathPrefix(path).Handler(http.StripPrefix(path + "/", http.FileServer(http.Dir(dir))))
 	return nil
 }
 

@@ -27,7 +27,7 @@ type ConceptRelationshipType struct {
 func NewConceptType(name string, concept_data []ConceptData, api_available bool, pathname string) (*ConceptType, error) {
 	var real_pathname string
 	if api_available {
-		if pathname != "" {
+		if pathname == "" {
 			return nil, errors.New("invalid pathname")
 		}
 		real_pathname = pathname
