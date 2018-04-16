@@ -119,7 +119,8 @@ func (s *Server) AddConceptRelationshipType(concept_relationship_type *ConceptRe
 	for _, ct := range s.concept_types {
 		if ct.Type_name == concept_relationship_type.Type1 {
 			type1_found = true
-		} else if ct.Type_name == concept_relationship_type.Type2 {
+		}
+		if ct.Type_name == concept_relationship_type.Type2 {
 			type2_found = true
 		}
 		if type1_found && type2_found {

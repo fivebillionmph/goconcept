@@ -50,35 +50,80 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		types := []string{}
-		for type_name, _ := range s.concept_types {
-			types = append(types, type_name)
+		types := []*ConceptType{}
+		for _, t := range s.concept_types {
+			types = append(types, t)
 		}
 
 		s.SendJSONResponse(w, r, &types)
 	})
 
-	s.AddRouterPath("/api/v1/ca/concept/types/{typename}", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
+	s.AddRouterPath("/api/v1/ca/concept/data", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		if !AuthenticateRequest(r, cxn, cw, "admin") {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			s.Logger.Println("unauthorized admin request")
 			return
 		}
 
-		vars := mux.Vars(r)
-		typename := vars["typename"]
-		concept_type, ok := s.concept_types[typename]
-		if !ok {
-			s.Logger.Printf("invalid concept type: %s\n", typename)
-			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+		query_vars := r.URL.Query()
+		count := Util__queryToInt(query_vars, "count", 0, 20, false, false, 20)
+		offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
+
+		concepts, err := DBConcept__getAll(cxn, offset, count)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
 
-		s.SendJSONResponse(w, r, concept_type)
+		s.SendJSONResponse(w, r, concepts)
+	})
+
+	s.AddRouterPath("/api/v1/ca/concept/data/{type}", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		if !AuthenticateRequest(r, cxn, cw, "admin") {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			s.Logger.Println("unauthorized admin request")
+			return
+		}
+
+		path_vars := mux.Vars(r)
+		type_name := path_vars["type"]
+
+		query_vars := r.URL.Query()
+		count := Util__queryToInt(query_vars, "count", 0, 20, false, false, 20)
+		offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
+
+		concepts, err := DBConcept__getByType(cxn, type_name, offset, count)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		s.SendJSONResponse(w, r, concepts)
+	})
+
+	s.AddRouterPath("/api/v1/ca/concept/data/{type}/{name}", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		if !AuthenticateRequest(r, cxn, cw, "admin") {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			s.Logger.Println("unauthorized admin request")
+			return
+		}
+
+		path_vars := mux.Vars(r)
+		type_name := path_vars["type"]
+		name := path_vars["name"]
+
+		concept, err := DBConcept__getByTypeName(cxn, type_name, name)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		concept.LoadRelationships(cxn)
+
+		s.SendJSONResponse(w, r, concept)
 	})
 
 	s.AddRouterPath("/api/v1/ca/concept/relationships", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
-		if(!AuthenticateRequest(r, cxn, cw, "admin")) {
+		if !AuthenticateRequest(r, cxn, cw, "admin") {
 			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 			s.Logger.Println("unauthorized admin request")
 			return
@@ -101,6 +146,7 @@ func (s *Server) addAdminRoutes() {
 		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			s.Logger.Println(err)
 			return
 		}
 
@@ -119,6 +165,7 @@ func (s *Server) addAdminRoutes() {
 		new_concept, err := DBConcept__create(cxn, body_data.Type_name, body_data.Name)
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			s.Logger.Println(err)
 			return
 		}
 
@@ -287,6 +334,7 @@ func (s *Server) addAdminRoutes() {
 		}{}
 		err := Util__requestJSONDecode(r, &body_data)
 		if err != nil {
+			s.Logger.Println(err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -303,19 +351,22 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		db_concept1, _ := DBConcept__getByTypeName(cxn, body_data.Type1, body_data.Name1)
+		db_concept1, err := DBConcept__getByTypeName(cxn, body_data.Type1, body_data.Name1)
 		if db_concept1 == nil {
+			s.Logger.Println(err)
 			http.Error(w, "invalid type1", http.StatusBadRequest)
 			return
 		}
-		db_concept2, _ := DBConcept__getByTypeName(cxn, body_data.Type2, body_data.Name2)
+		db_concept2, err := DBConcept__getByTypeName(cxn, body_data.Type2, body_data.Name2)
 		if db_concept2 == nil {
+			s.Logger.Println(err)
 			http.Error(w, "invalid type2", http.StatusBadRequest)
 			return
 		}
 
 		new_relationship, err := DBConceptRelationship__create(cxn, db_concept1.F_id, db_concept2.F_id, body_data.String1, body_data.String2)
 		if err != nil {
+			s.Logger.Println(err)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
 		}
@@ -344,13 +395,15 @@ func (s *Server) addAdminRoutes() {
 			return
 		}
 
-		db_concept1, _ := DBConcept__getByTypeName(cxn, body_data.Type1, body_data.Name1)
+		db_concept1, err := DBConcept__getByTypeName(cxn, body_data.Type1, body_data.Name1)
 		if db_concept1 == nil {
+			s.Logger.Println(err)
 			http.Error(w, "invalid type1", http.StatusBadRequest)
 			return
 		}
-		db_concept2, _ := DBConcept__getByTypeName(cxn, body_data.Type2, body_data.Name2)
+		db_concept2, err := DBConcept__getByTypeName(cxn, body_data.Type2, body_data.Name2)
 		if db_concept2 == nil {
+			s.Logger.Println(err)
 			http.Error(w, "invalid type2", http.StatusBadRequest)
 			return
 		}
@@ -407,7 +460,7 @@ func (s *Server) addUserRoutes(allow_user_create bool) {
 		session, _ := cw.Get(r, "base")
 		logged_in_user, _ := Util__getUserFromSession(session)
 		if logged_in_user != nil {
-			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			http.Error(w, "Already logged in", http.StatusBadRequest)
 			return
 		}
 

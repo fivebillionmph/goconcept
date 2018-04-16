@@ -20,7 +20,7 @@ type DBConceptRelationship struct {
 }
 
 func DBConceptRelationship__create(cxn *Connection, id1 int, id2 int, string1 string, string2 string) (*DBConceptRelationship, error) {
-	row := cxn.DB.QueryRow("select count(*) from " + DBConceptRelationship__table + " where id1 = ? and id2 = ? and string1 = ? and string2 = ?")
+	row := cxn.DB.QueryRow("select count(*) from " + DBConceptRelationship__table + " where id1 = ? and id2 = ? and string1 = ? and string2 = ?", id1, id2, string1, string2)
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
@@ -61,7 +61,7 @@ func (d *DBConceptRelationship) readRow(row SQLRowInterface) error {
 }
 
 func DBConceptRelationship__getByID(cxn *Connection, id int) (*DBConceptRelationship, error) {
-	row := cxn.DB.QueryRow("select * from " + DBConcept__table + " where id = ?", id)
+	row := cxn.DB.QueryRow("select * from " + DBConceptRelationship__table + " where id = ?", id)
 	rel := DBConceptRelationship{}
 	err := rel.readRow(row)
 	if err != nil {

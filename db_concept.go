@@ -20,13 +20,15 @@ type DBConcept struct {
 
 type DBConcept__Relationship struct {
 	Concept *DBConcept	`json:"item"`
-	Reltype string `json:"reltype"`
+	String1 string `json:"string1"`
+	String2 string `json:"string2"`
+	Reverse bool `json:"reverse"`
 }
 
 /* create */
 
 func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConcept, error) {
-	row := cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type = ? and name = ?")
+	row := cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type = ? and name = ?", type_name, name)
 	var count int
 	err := row.Scan(&count)
 	if err != nil {
@@ -78,6 +80,25 @@ func DBConcept__getByID(cxn *Connection, id int) (*DBConcept, error) {
 
 	concept.LoadData(cxn)
 	return &concept, nil
+}
+
+func DBConcept__getAll(cxn *Connection, offset int, count int) (*[]DBConcept, error) {
+	rows, err := cxn.DB.Query("select * from " + DBConcept__table + " limit ?, ?", offset, count)
+	if err != nil {
+		return nil, err
+	}
+
+	var concepts []DBConcept
+	for rows.Next() {
+		concept := DBConcept{}
+		err := concept.readRow(rows)
+		if err == nil {
+			concept.LoadData(cxn)
+			concepts = append(concepts, concept)
+		}
+	}
+
+	return &concepts, nil
 }
 
 func DBConcept__getByTypeName(cxn *Connection, type_name string, name string) (*DBConcept, error) {
@@ -195,20 +216,20 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 	var final_relationships []DBConcept__Relationship
 	for _, rel := range *relationships {
 		var other_concept *DBConcept
-		var reltype string
+		var reverse bool
 		if rel.F_id1 == d.F_id {
 			rel.LoadConcept(cxn, 2)
 			other_concept = rel.concept2
-			reltype = rel.F_string1
+			reverse = false
 		} else {
 			rel.LoadConcept(cxn, 1)
 			other_concept = rel.concept1
-			reltype = rel.F_string2
+			reverse = true
 		}
 		if other_concept == nil {
 			continue
 		}
-		this_relationship := DBConcept__Relationship{other_concept, reltype}
+		this_relationship := DBConcept__Relationship{other_concept, rel.F_string1, rel.F_string2, reverse}
 		final_relationships = append(final_relationships, this_relationship)
 	}
 
