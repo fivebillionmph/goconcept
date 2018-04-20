@@ -19,12 +19,12 @@ func (s *Server) AddRouterPath(path string, method string, handler func(http.Res
 	return nil
 }
 
-func (s *Server) addStaticRouterPath(path string, dir string) error {
+func (s *Server) AddStaticRouterPath(path string, dir string) error {
 	s.router.PathPrefix(path).Handler(http.StripPrefix(path + "/", http.FileServer(http.Dir(dir))))
 	return nil
 }
 
-func (s *Server) addHTMLRouterPath(path_prefix string, html_file string) {
+func (s *Server) AddHTMLRouterPath(path_prefix string, html_file string) {
 	s.router.PathPrefix(path_prefix).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, html_file)
 	})

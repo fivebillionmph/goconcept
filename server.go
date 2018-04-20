@@ -36,12 +36,12 @@ func NewServer(cookie_key string, dbhost string, dbuser string, dbpassword strin
 	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}, nil
 }
 
-func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, admin_html_file string, allow_user_create bool) {
+func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, allow_user_create bool) {
 	s.addAdminRoutes()
 	s.addUserRoutes(allow_user_create)
-	s.addStaticRouterPath(static_path, static_dir)
-	s.addHTMLRouterPath(admin_path, admin_html_file)
-	s.addHTMLRouterPath("/", html_file)
+	s.AddStaticRouterPath(static_path, static_dir)
+	s.AddStaticRouterPath(admin_path, "./goconcept-files/admin-frontend")
+	s.AddHTMLRouterPath("/", html_file)
 	s.http_server.Handle("/", s.router)
 
 	go func() {
