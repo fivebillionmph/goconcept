@@ -2,6 +2,8 @@ import React, { Component } from "react";
 import styled, { css } from "styled-components";
 import axios from "axios";
 
+import { Table, Th, Td } from "../util/styles";
+
 export default class Comp extends Component {
 	constructor(props) {
 		super(props);
@@ -17,6 +19,10 @@ export default class Comp extends Component {
 		this.deleteRelationship = this.deleteRelationship.bind(this);
 		this.closeModals = this.closeModals.bind(this);
 		this.changeNewRelationshipType = this.changeNewRelationshipType.bind(this);
+		this.relOtherNameChange = this.relOtherNameChange.bind(this);
+		this.relOtherNameOnChange = this.relOtherNameOnChange.bind(this);
+		this.relOtherNameAutocomplete = this.relOtherNameAutocomplete.bind(this);
+		this.relOtherNameAutocompleteShow = this.relOtherNameAutocompleteShow.bind(this);
 
 		const addable_data = this.getAddableData(this.props.types, this.props.concept);
 		const addable_relationships = [];
@@ -59,7 +65,10 @@ export default class Comp extends Component {
 			addable_data: addable_data,
 			addable_relationships: addable_relationships,
 			concept: this.props.concept,
-			selected_addable_relationship: 0
+			selected_addable_relationship: 0,
+			rel_other_name: "",
+			rel_other_name_autocomplete: false,
+			rel_other_concepts: []
 		};
 
 		this.refreshConcept();
@@ -272,24 +281,72 @@ export default class Comp extends Component {
 		const state = Object.assign({}, this.state, {
 			selected_addable_relationship: event.target.value
 		});
+		this.setState(state, () => {
+			this.relOtherNameChange("")
+				.then(() => {
+					this.relOtherNameAutocomplete("");
+				});
+		});
+	}
+
+	relOtherNameAutocompleteShow(change) {
+		const state = Object.assign({}, this.state, {
+			rel_other_name_autocomplete: change
+		});
 		this.setState(state);
+	}
+
+	relOtherNameAutocomplete(value) {
+		const type = this.state.addable_relationships[this.state.selected_addable_relationship].other_type;
+		axios.get("/api/v1/ca/concept/data-search/" + type + "?q=" + value)
+			.then((response) => {
+				const state = Object.assign({}, this.state, {
+					rel_other_concepts: response.data
+				});
+				this.setState(state);
+			});
+	}
+
+	relOtherNameOnChange(event) {
+		const value = event.target.value;
+		const state = Object.assign({}, this.state, {
+			rel_other_name: value
+		});
+		this.setState(state, () => {
+			this.relOtherNameAutocomplete(value);
+		});
+	}
+
+	relOtherNameChange(name) {
+		const promise = new Promise((resolve, reject) => {
+			const state = Object.assign({}, this.state, {
+				rel_other_name: name
+			});
+			this.setState(state, () => {
+				resolve();
+			});
+		});
+
+		return promise;
 	}
 
 	render() {
 		return (
 			<Wrapper>
 				<h2>Single concept</h2>
-				<ElementsWrapper>
-					<ElementTitle>Type:</ElementTitle>
-					<ElementElement>{ this.state.concept.type }</ElementElement>
-
-					<ElementTitle>Name:</ElementTitle>
-					<ElementElement>{ this.state.concept.name }</ElementElement>
-
-					<DeleteTypeButton onClick={this.deleteConceptConfirm}>Delete</DeleteTypeButton>
-					<div></div>
-
-				</ElementsWrapper>
+				<Table>
+					<tbody>
+						<tr>
+							<Td>Type</Td>
+							<Td>{ this.state.concept.type }</Td>
+						</tr>
+						<tr>
+							<Td>Name</Td>
+							<Td>{ this.state.concept.name }</Td>
+						</tr>
+					</tbody>
+				</Table>
+				<DeleteTypeButton onClick={this.deleteConceptConfirm}>Delete</DeleteTypeButton>
 
 				<h4>Data</h4>
 				{this.state.addable_data.length > 0 &&
@@ -326,19 +383,19 @@ export default class Comp extends Component {
 						</div>
 					</div>
 				}
-				<DataTable>
+				<Table>
 					<tbody>
 						{this.state.concept.data && this.state.concept.data.map((data, ix) => {
 							return (
 								<tr key={ix}>
-									<td>{data.key}</td>
-									<td>{data.value}</td>
-									<td><a href="javascript:void(0)" onClick={() => this.deleteDataConfirm(data)}>Delete</a></td>
+									<Td>{data.key}</Td>
+									<Td>{data.value}</Td>
+									<Td><a href="javascript:void(0)" onClick={() => this.deleteDataConfirm(data)}>Delete</a></Td>
 								</tr>
 							);
 						})}
 					</tbody>
-				</DataTable>
+				</Table>
 
 				<h4>Relationships</h4>
 				{this.state.addable_relationships.length > 0 &&
@@ -374,7 +431,18 @@ export default class Comp extends Component {
 										<div>{ this.state.addable_relationships[this.state.selected_addable_relationship].other_type }</div>
 										<div>Other type name</div>
 										<div>
-											<input type="text" name="other_name" />
+											<input type="text" value={this.state.rel_other_name} onChange={this.relOtherNameOnChange} onFocus={() => this.relOtherNameAutocompleteShow(true)} onBlur={() => this.relOtherNameAutocompleteShow(false)} name="other_name" />
+											{this.state.rel_other_name_autocomplete &&
+												<Table>
+													<tbody>
+														{this.state.rel_other_concepts && this.state.rel_other_concepts.map((oc, ix) => {
+															return (
+																<tr onClick={() => this.relOtherNameChange(oc.name)} key={ix}><Td>{oc.name}</Td></tr>
+															)
+														})}
+													</tbody>
+												</Table>
+											}
 										</div>
 										<div>
 											<input type="submit" value="Submit" />
@@ -385,20 +453,20 @@ export default class Comp extends Component {
 						</div>
 					</div>
 				}
-				<DataTable>
+				<Table>
 					<tbody>
 						{this.state.concept.relationships && this.state.concept.relationships.map((rel, ix) => {
 							return (
 								<tr key={ix}>
-									<td>{rel.reverse ? rel.string2 : rel.string1}</td>
-									<td>{rel.item.type}</td>
-									<td>{rel.item.name}</td>
-									<td><a href="javascript:void(0)" onClick={() => this.deleteRelationshipConfirm(rel)}>Delete</a></td>
+									<Td>{rel.reverse ? rel.string2 : rel.string1}</Td>
+									<Td>{rel.item.type}</Td>
+									<Td>{rel.item.name}</Td>
+									<Td><a href="javascript:void(0)" onClick={() => this.deleteRelationshipConfirm(rel)}>Delete</a></Td>
 								</tr>
 							);
 						})}
 					</tbody>
-				</DataTable>
+				</Table>
 
 				{this.state.modal_delete_data &&
 					<DeleteDataModal data={this.state.modal_delete_data} confirmFun={() => this.deleteData(this.state.modal_delete_data)} cancelFun={this.closeModals}>
@@ -438,28 +506,24 @@ const AddDataButton = styled.div`
 	${button_css}
 `;
 
-const ElementsWrapper = styled.div`
-	display: grid;
-	grid-template-columns: auto 1fr;
-	grid-gap: 5px;
-`;
-
-const ElementTitle = styled.div`
-	text-align: right;
-`;
-
-const ElementElement = styled.div`
-
-`;
+//const ElementsWrapper = styled.div`
+//	display: grid;
+//	grid-template-columns: auto 1fr;
+//	grid-gap: 5px;
+//`;
+//
+//const ElementTitle = styled.div`
+//	text-align: right;
+//`;
+//
+//const ElementElement = styled.div`
+//
+//`;
 
 const NewDataFormWrapper = styled.div`
 	display: grid;
 	grid-gap: 5px;
 	grid-template-columns: auto 1fr;
-`;
-
-const DataTable = styled.table`
-	margin: 5px 0px;
 `;
 
 /* #################################################################################################### */

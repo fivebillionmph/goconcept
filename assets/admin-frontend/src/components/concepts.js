@@ -4,6 +4,7 @@ import axios from "axios";
 
 import AddConcept from "./add-concept";
 import SingleConcept from "./single-concept";
+import { Td, Th, Table } from "../util/styles";
 
 export default class Comp extends Component {
 	constructor(props) {
@@ -188,23 +189,4 @@ const PanelButton = styled.div`
 	padding: 5px;
 	border: 1px black solid;
 	margin: 5px;
-`;
-
-const t_style = css`
-	cursor: pointer;
-	padding: 5px;
-	margin: 5px 0px;
-	border: 1px solid black;
-`;
-
-const Td = styled.td`
-	${t_style}
-`;
-
-const Th = styled.th`
-	${t_style}
-`;
-
-const Table = styled.table`
-	border-collapse: collapse;
 `;

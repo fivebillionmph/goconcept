@@ -133,6 +133,25 @@ func DBConcept__getByType(cxn *Connection, type_name string, offset int, count i
 	return &concepts, nil
 }
 
+func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search string, offset int, count int) (*[]DBConcept, error) {
+	rows, err := cxn.DB.Query("select * from " + DBConcept__table + " where type = ? and name like ? limit ?, ?", type_name, "%" + name_search + "%", offset, count)
+	if err != nil {
+		return nil, err
+	}
+
+	var concepts []DBConcept
+	for rows.Next() {
+		concept := DBConcept{}
+		err := concept.readRow(rows)
+		if err == nil {
+			concept.LoadData(cxn)
+			concepts = append(concepts, concept)
+		}
+	}
+
+	return &concepts, nil
+}
+
 /* update */
 
 /* delete */

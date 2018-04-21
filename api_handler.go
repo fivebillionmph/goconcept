@@ -422,6 +422,34 @@ func (s *Server) addAdminRoutes() {
 		}
 		s.SendJSONResponse(w, r, true)
 	})
+
+	s.AddRouterPath("/api/v1/ca/concept/data-search/{type}", "GET", func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
+		if !AuthenticateRequest(r, cxn, cw, "admin") {
+			http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+			s.Logger.Println("unauthorized admin request")
+			return
+		}
+
+		path_vars := mux.Vars(r)
+		type_name := path_vars["type"]
+
+		query_vars := r.URL.Query()
+		q, ok := query_vars["q"]
+		if !ok || len(q) == 0 {
+			http.Error(w, "q query required", http.StatusBadRequest)
+			return
+		}
+		count := Util__queryToInt(query_vars, "count", 0, 100, false, false, 100)
+		offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
+
+		concepts, err := DBConcept__getBySearchName(cxn, type_name, q[0], offset, count)
+		if err != nil {
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		s.SendJSONResponse(w, r, concepts)
+	})
 }
 
 func (s *Server) addUserRoutes(allow_user_create bool) {

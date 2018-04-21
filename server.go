@@ -52,20 +52,29 @@ func (s *Server) Start(static_path string, static_dir string, html_file string, 
 	serverCommands(s)
 }
 
-func (s *Server) AddConceptType(concept_type *ConceptType) error {
-	if concept_type == nil {
-		return errors.New("nil concept type")
+func (s *Server) AddConceptType(concept_type ConceptType) error {
+	/* validate concept type data */
+	existing_data_types := make(map[string]bool)
+	for _, cd := range concept_type.Concept_data {
+		_, exists := existing_data_types[cd.Type_name]
+		if exists {
+			return errors.New("duplicate data type name: " + concept_type.Type_name + " - " + cd.Type_name)
+		}
+		existing_data_types[cd.Type_name] = true
 	}
+
+	/* validate not duplicate concept type */
 	for _, ct := range s.concept_types {
 		if ct.Type_name == concept_type.Type_name {
-			return errors.New("duplicate concept name")
+			return errors.New("duplicate concept name: " + ct.Type_name)
 		}
 		if ct.Pathname != "" && ct.Pathname == concept_type.Pathname {
-			return errors.New("duplicate pathname")
+			return errors.New("duplicate pathname: " + ct.Pathname)
 		}
 	}
-	s.concept_types[concept_type.Type_name] = concept_type
+	s.concept_types[concept_type.Type_name] = &concept_type
 
+	/* add api routes */
 	if concept_type.Api_available {
 		single_endpoint_handler := func(w http.ResponseWriter, r *http.Request, cxn *Connection, cw *CookieWrapper) {
 			vars := mux.Vars(r)
@@ -102,10 +111,7 @@ func (s *Server) AddConceptType(concept_type *ConceptType) error {
 	return nil
 }
 
-func (s *Server) AddConceptRelationshipType(concept_relationship_type *ConceptRelationshipType) error {
-	if concept_relationship_type == nil {
-		return errors.New("nil concept relationship type")
-	}
+func (s *Server) AddConceptRelationshipType(concept_relationship_type ConceptRelationshipType) error {
 	for _, crt := range s.concept_relationship_types {
 		if crt.Type1 == concept_relationship_type.Type1 &&
 			crt.Type2 == concept_relationship_type.Type2 &&
@@ -130,6 +136,6 @@ func (s *Server) AddConceptRelationshipType(concept_relationship_type *ConceptRe
 	if !type1_found || !type2_found {
 		return errors.New("invalid relationship type")
 	}
-	s.concept_relationship_types = append(s.concept_relationship_types, concept_relationship_type)
+	s.concept_relationship_types = append(s.concept_relationship_types, &concept_relationship_type)
 	return nil
 }
