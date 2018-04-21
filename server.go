@@ -41,7 +41,10 @@ func (s *Server) Start(static_path string, static_dir string, html_file string, 
 	s.addUserRoutes(allow_user_create)
 	s.AddStaticRouterPath(static_path, static_dir)
 	s.AddStaticRouterPath(admin_path, "./goconcept-files/admin-frontend")
-	s.AddHTMLRouterPath("/", html_file)
+	s.router.PathPrefix("/api/").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+	})
+	s.AddServeSingleFilePath("/", html_file)
 	s.http_server.Handle("/", s.router)
 
 	go func() {

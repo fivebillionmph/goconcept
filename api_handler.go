@@ -24,7 +24,7 @@ func (s *Server) AddStaticRouterPath(path string, dir string) error {
 	return nil
 }
 
-func (s *Server) AddHTMLRouterPath(path_prefix string, html_file string) {
+func (s *Server) AddServeSingleFilePath(path_prefix string, html_file string) {
 	s.router.PathPrefix(path_prefix).HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, html_file)
 	})
