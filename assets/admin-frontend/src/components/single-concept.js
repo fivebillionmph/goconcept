@@ -68,7 +68,8 @@ export default class Comp extends Component {
 			selected_addable_relationship: 0,
 			rel_other_name: "",
 			rel_other_name_autocomplete: false,
-			rel_other_concepts: []
+			rel_other_concepts: [],
+			first_rel_other_name_focus: true
 		};
 
 		this.refreshConcept();
@@ -290,18 +291,48 @@ export default class Comp extends Component {
 	}
 
 	relOtherNameAutocompleteShow(change) {
-		const state = Object.assign({}, this.state, {
-			rel_other_name_autocomplete: change
-		});
-		this.setState(state);
+		let res_func = () => {};
+		if(this.state.first_rel_other_name_focus) {
+			res_func = () => {
+				this.relOtherNameAutocomplete("");
+			};
+		}
+		setTimeout(() => {
+			const state = Object.assign({}, this.state, {
+				rel_other_name_autocomplete: change,
+				first_rel_other_name_focus: false
+			});
+			this.setState(state, res_func);
+		}, 100);
 	}
 
 	relOtherNameAutocomplete(value) {
 		const type = this.state.addable_relationships[this.state.selected_addable_relationship].other_type;
 		axios.get("/api/v1/ca/concept/data/" + type + "?q=" + value + "&count=100")
 			.then((response) => {
+				let new_rel = [];
+				if(response.data) {
+					for(let i = 0; i < response.data.length; i++) {
+						let exists = false;
+						const this_rel = response.data[i];
+						if(this_rel.type == this.state.concept.type && this_rel.name == this.state.name) {
+							exists = true;
+						} else if(this.state.concept.relationships) {
+							for(var j = 0; j < this.state.concept.relationships.length; j++) {
+								const existing_rel = this.state.concept.relationships[j];
+								if(existing_rel.item.type == this_rel.type && existing_rel.item.name == this_rel.name) {
+									exists = true;
+									break;
+								}
+							}
+						}
+						if(!exists) {
+							new_rel.push(this_rel);
+						}
+					}
+				}
 				const state = Object.assign({}, this.state, {
-					rel_other_concepts: response.data
+					rel_other_concepts: new_rel
 				});
 				this.setState(state);
 			});
