@@ -10,21 +10,24 @@ export default class Comp extends Component {
 	constructor(props) {
 		super(props);
 		this.getConcepts = this.getConcepts.bind(this);
+		this.getConceptsCount = this.getConceptsCount.bind(this);
+		this.refreshConcepts = this.refreshConcepts.bind(this);
 		this.changeMode = this.changeMode.bind(this);
 		this.changeToConcept = this.changeToConcept.bind(this);
-		this.refreshConcepts = this.refreshConcepts.bind(this);
 		this.unsetConcept = this.unsetConcept.bind(this);
 		this.getComponentTypes = this.getComponentTypes.bind(this);
 		this.getRelationshipTypes = this.getRelationshipTypes.bind(this);
+		this.changePage = this.changePage.bind(this)
 
 		this.state = {
 			concept_types: [],
 			relationship_types: [],
 			concepts: [],
 			selected_concept: null,
-			concept_type_filter: null,
+			mode: "view",
+			sort: "",
 			page: 1,
-			mode: "view"
+			total_count: 0
 		};
 
 		this.per_page = 20;
@@ -73,28 +76,44 @@ export default class Comp extends Component {
 	}
 
 	refreshConcepts() {
-		this.getConcepts(this.state.concept_type_filter, this.state.page);
+		this.getConcepts();
+		this.getConceptsCount();
 	}
 
-	getConcepts(type, page) {
+	getConcepts() {
 		let count = this.per_page;
-		let offset = (page - 1) * count;
+		let offset = (this.state.page - 1) * count;
 
 		let url = "/api/v1/ca/concept/data";
-		if(type) {
-			url += "/" + type;
-		}
 		url += "?count=" + count + "&offset=" + offset;
 
 		axios.get(url)
 			.then((response) => {
 				let state = Object.assign({}, this.state, {
 					concepts: response.data,
-					concept_type_filter: type,
-					page: page
 				});
 				this.setState(state);
 			});
+	}
+
+	getConceptsCount() {
+		let url = "/api/v1/ca/concept/data-count";
+		axios.get(url)
+			.then((response) => {
+				const state = Object.assign({}, this.state, {
+					total_count: response.data
+				});
+				this.setState(state);
+			});
+	}
+
+	changePage(page) {
+		const state = Object.assign({}, this.state, {
+			page: page
+		});
+		this.setState(state, () => {
+			this.getConcepts();
+		});
 	}
 
 	changeToConcept(concept) {
@@ -157,6 +176,7 @@ export default class Comp extends Component {
 									})}
 								</tbody>
 							</Table>
+							<Pagination count={this.state.total_count} page={this.state.page} per_page={this.per_page} changePageFun={this.changePage} />
 						</div>
 					}
 					{this.state.mode == "single-concept" &&
@@ -190,3 +210,30 @@ const PanelButton = styled.div`
 	border: 1px black solid;
 	margin: 5px;
 `;
+
+class Pagination extends Component {
+	render() {
+		let last_page = Math.floor(this.props.count / this.props.per_page);
+		if(this.props.count % this.props.per_page != 0) {
+			last_page += 1;
+		}
+		return (
+			<div>
+				{this.props.page != 1 &&
+					<span><a href="javascript:void(0)" onClick={() => this.props.changePageFun(1)}>1</a>&nbsp;</span>
+				}
+				{this.props.page - 1 > 1 &&
+					<span><a href="javascript:void(0)" onClick={() => this.props.changePageFun(this.props.page - 1)}>{this.props.page - 1}</a>&nbsp;</span>
+
+				}
+				<span>({this.props.page})&nbsp;</span>
+				{this.props.page + 1 < last_page &&
+					<span><a href="javascript:void(0)" onClick={() => this.props.changePageFun(this.props.page + 1)}>{this.props.page + 1}</a>&nbsp;</span>
+				}
+				{last_page != 1 && last_page != this.props.page &&
+					<span><a href="javascript:void(0)" onClick={() => this.props.changePageFun(last_page)}>{last_page}</a>&nbsp;</span>
+				}
+			</div>
+		);
+	}
+}

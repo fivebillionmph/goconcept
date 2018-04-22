@@ -3,6 +3,8 @@ package goconcept
 import (
 	"errors"
 	"time"
+	"strings"
+	"database/sql"
 )
 
 const DBConcept__table string = "base_concepts"
@@ -82,8 +84,16 @@ func DBConcept__getByID(cxn *Connection, id int) (*DBConcept, error) {
 	return &concept, nil
 }
 
-func DBConcept__getAll(cxn *Connection, offset int, count int) (*[]DBConcept, error) {
-	rows, err := cxn.DB.Query("select * from " + DBConcept__table + " limit ?, ?", offset, count)
+func DBConcept__getAll(cxn *Connection, offset int, count int, query string, sort_raw string) (*[]DBConcept, error) {
+	sort, asc := DBConcept__getSortStrings(sort_raw)
+
+	var rows *sql.Rows
+	var err error
+	if query != "" {
+		rows, err = cxn.DB.Query("select * from " + DBConcept__table + " where type like ? or name like ? order by " + sort + " " + asc + " limit ?, ?", "%" + query + "%", "%" + query + "%", offset, count)
+	} else {
+		rows, err = cxn.DB.Query("select * from " + DBConcept__table + " order by " + sort + " " + asc + " limit ?, ?", offset, count)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +111,23 @@ func DBConcept__getAll(cxn *Connection, offset int, count int) (*[]DBConcept, er
 	return &concepts, nil
 }
 
+func DBConcept__countAll(cxn *Connection, query string) (int, error) {
+	var row *sql.Row
+	if query != "" {
+		row = cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type like ? or name like ?", "%" + query + "%", "%" + query + "%")
+	} else {
+		row = cxn.DB.QueryRow("select count(*) from " + DBConcept__table)
+	}
+
+	var count int
+	err := row.Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func DBConcept__getByTypeName(cxn *Connection, type_name string, name string) (*DBConcept, error) {
 	row := cxn.DB.QueryRow("select * from " + DBConcept__table + " where type=? and name=?", type_name, name)
 
@@ -114,8 +141,16 @@ func DBConcept__getByTypeName(cxn *Connection, type_name string, name string) (*
 	return &concept, nil
 }
 
-func DBConcept__getByType(cxn *Connection, type_name string, offset int, count int) (*[]DBConcept, error) {
-	rows, err := cxn.DB.Query("select * from " + DBConcept__table + " where type=? limit ?, ?", type_name, offset, count)
+func DBConcept__getByType(cxn *Connection, type_name string, offset int, count int, query string, sort_raw string) (*[]DBConcept, error) {
+	sort, asc := DBConcept__getSortStrings(sort_raw)
+
+	var rows *sql.Rows
+	var err error
+	if query != "" {
+		rows, err = cxn.DB.Query("select * from " + DBConcept__table + " where type=? and name like ? order by " + sort + " " + asc + " limit ?, ?", type_name, "%" + query + "%", offset, count)
+	} else {
+		rows, err = cxn.DB.Query("select * from " + DBConcept__table + " where type=? order by " + sort + " " + asc + " limit ?, ?", type_name, offset, count)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +245,7 @@ func (d *DBConcept) LoadData(cxn *Connection) {
 	d.Data = data
 }
 
-func DBConcept__getCountByType(cxn *Connection, type_name string) (int, error ) {
+func DBConcept__countByType(cxn *Connection, type_name string) (int, error ) {
 	row := cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type=?", type_name)
 
 	var count int
@@ -253,4 +288,23 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 	}
 
 	d.Relationships = &final_relationships
+}
+
+func DBConcept__getSortStrings(sort_raw string) (string, string) {
+	var sort string
+	var asc string
+	if strings.HasSuffix(sort_raw, "-desc") {
+		asc = "desc"
+	} else {
+		asc = "asc"
+	}
+	if strings.HasPrefix(sort_raw, "name-") {
+		sort = "name"
+	} else if strings.HasPrefix(sort_raw, "type-") {
+		sort = "type"
+	} else {
+		sort = "id"
+	}
+
+	return sort, asc
 }

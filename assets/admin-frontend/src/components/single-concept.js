@@ -298,7 +298,7 @@ export default class Comp extends Component {
 
 	relOtherNameAutocomplete(value) {
 		const type = this.state.addable_relationships[this.state.selected_addable_relationship].other_type;
-		axios.get("/api/v1/ca/concept/data-search/" + type + "?q=" + value)
+		axios.get("/api/v1/ca/concept/data/" + type + "?q=" + value + "&count=100")
 			.then((response) => {
 				const state = Object.assign({}, this.state, {
 					rel_other_concepts: response.data

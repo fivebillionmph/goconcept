@@ -100,7 +100,10 @@ func (s *Server) AddConceptType(concept_type ConceptType) error {
 			query_vars := r.URL.Query()
 			count := Util__queryToInt(query_vars, "count", 0, 20, false, false, 20)
 			offset := Util__queryToInt(query_vars, "offset", 0, 0, false, true, 0)
-			concepts, err := DBConcept__getByType(cxn, concept_type.Type_name, offset, count)
+			query := Util__queryToString(query_vars, "q", "")
+			sort := Util__queryToString(query_vars, "sort", "")
+
+			concepts, err := DBConcept__getByType(cxn, concept_type.Type_name, offset, count, query, sort)
 			if err != nil {
 				s.Logger.Println(err)
 				http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)

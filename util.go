@@ -30,6 +30,15 @@ func Util__queryToInt(vars url.Values, var_name string, min int, max int, min_in
 	return val_int
 }
 
+func Util__queryToString(vars url.Values, var_name string, default_val string) string {
+	raw, ok := vars[var_name]
+	if ok && len(raw) > 0 {
+		return raw[0]
+	} else {
+		return default_val
+	}
+}
+
 func Util__requestJSONDecode(r *http.Request, s interface{}) error {
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(s)
