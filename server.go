@@ -36,15 +36,7 @@ func NewServer(cookie_key string, dbhost string, dbuser string, dbpassword strin
 	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}, nil
 }
 
-func (s *Server) Start(static_path string, static_dir string, html_file string, admin_path string, allow_user_create bool) {
-	s.addAdminRoutes()
-	s.addUserRoutes(allow_user_create)
-	s.AddStaticRouterPath(static_path, static_dir)
-	s.AddStaticRouterPath(admin_path, "./goconcept-files/admin-frontend")
-	s.router.PathPrefix("/api/").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-	})
-	s.AddServeSingleFilePath("/", html_file)
+func (s *Server) Start() {
 	s.http_server.Handle("/", s.router)
 
 	go func() {
@@ -53,6 +45,15 @@ func (s *Server) Start(static_path string, static_dir string, html_file string, 
 	}()
 
 	serverCommands(s)
+}
+
+func (s *Server) DoneAddingConceptsAndAPI(admin_path string, allow_user_create bool) {
+	s.addAdminRoutes()
+	s.addUserRoutes(allow_user_create)
+	s.AddStaticRouterPathPrefix(admin_path, "./goconcept-files/admin-frontend")
+	s.router.PathPrefix("/api/").HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
+	})
 }
 
 func (s *Server) AddConceptType(concept_type ConceptType) error {
