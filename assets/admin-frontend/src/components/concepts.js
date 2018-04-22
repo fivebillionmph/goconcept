@@ -18,6 +18,7 @@ export default class Comp extends Component {
 		this.getComponentTypes = this.getComponentTypes.bind(this);
 		this.getRelationshipTypes = this.getRelationshipTypes.bind(this);
 		this.changePage = this.changePage.bind(this)
+		this.searchFilterOnChange = this.searchFilterOnChange.bind(this);
 
 		this.state = {
 			concept_types: [],
@@ -27,7 +28,8 @@ export default class Comp extends Component {
 			mode: "view",
 			sort: "",
 			page: 1,
-			total_count: 0
+			total_count: 0,
+			search_filter: ""
 		};
 
 		this.per_page = 20;
@@ -84,8 +86,8 @@ export default class Comp extends Component {
 		let count = this.per_page;
 		let offset = (this.state.page - 1) * count;
 
-		let url = "/api/v1/ca/concept/data";
-		url += "?count=" + count + "&offset=" + offset;
+		let url = "/api/v1/ca/concept/data?q=" + this.state.search_filter;
+		url += "&count=" + count + "&offset=" + offset;
 
 		axios.get(url)
 			.then((response) => {
@@ -97,7 +99,7 @@ export default class Comp extends Component {
 	}
 
 	getConceptsCount() {
-		let url = "/api/v1/ca/concept/data-count";
+		let url = "/api/v1/ca/concept/data-count?q=" + this.state.search_filter;
 		axios.get(url)
 			.then((response) => {
 				const state = Object.assign({}, this.state, {
@@ -144,6 +146,17 @@ export default class Comp extends Component {
 		});
 	}
 
+	searchFilterOnChange(event) {
+		if(!event.target) return;
+		const new_value = event.target.value;
+		const state = Object.assign({}, this.state, {
+			search_filter: new_value
+		});
+		this.setState(state, () => {
+			this.refreshConcepts();
+		});
+	}
+
 	render() {
 		return (
 			<Wrapper>
@@ -159,11 +172,12 @@ export default class Comp extends Component {
 					{this.state.mode == "view" &&
 						<div>
 							<h2>Concept list</h2>
+							<input type="text" value={this.state.search_filter} onChange={this.searchFilterOnChange} />
 							<Table>
 								<thead>
 									<tr>
-										<th>Type</th>
-										<th>Name</th>
+										<Th>Type</Th>
+										<Th>Name</Th>
 									</tr>
 								</thead>
 								<tbody>
