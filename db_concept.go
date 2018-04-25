@@ -18,6 +18,9 @@ type DBConcept struct {
 
 	Data *[]DBConceptData	`json:"data"`
 	Relationships *[]DBConcept__Relationship `json:"relationships"`
+
+	data_count_map map[string]int
+	data_index_map map[string][]int
 }
 
 type DBConcept__Relationship struct {
@@ -237,12 +240,25 @@ func (d *DBConcept) LoadData(cxn *Connection) {
 		return
 	}
 
+	d.data_count_map = make(map[string]int)
+	d.data_index_map = make(map[string][]int)
+
 	data, err := DBConceptData__getByConceptID(cxn, d.F_id)
 	if err != nil {
 		return
 	}
 
 	d.Data = data
+	for i, datum := range *d.Data {
+		if _, ok := d.data_count_map[datum.F_key]; !ok {
+			d.data_count_map[datum.F_key] = 0
+		}
+		if _, ok := d.data_index_map[datum.F_key]; !ok {
+			d.data_index_map[datum.F_key] = []int{}
+		}
+		d.data_count_map[datum.F_key] += 1
+		d.data_index_map[datum.F_key] = append(d.data_index_map[datum.F_key], i)
+	}
 }
 
 func DBConcept__countByType(cxn *Connection, type_name string) (int, error ) {
@@ -307,4 +323,34 @@ func DBConcept__getSortStrings(sort_raw string) (string, string) {
 	}
 
 	return sort, asc
+}
+
+func (d *DBConcept) GetDataCount(name string) int {
+	if d.data_count_map == nil {
+		return 0
+	}
+
+	if count, ok := d.data_count_map[name]; !ok {
+		return 0
+	} else {
+		return count
+	}
+}
+
+func (d *DBConcept) GetDataVal(name string, index int) string {
+	if d.data_count_map == nil || d.data_index_map == nil {
+		return ""
+	}
+
+	count, ok := d.data_count_map[name]
+	if !ok {
+		return ""
+	}
+	if index >= count {
+		return ""
+	}
+
+	real_index := d.data_index_map[name][index]
+
+	return (*d.Data)[real_index].F_value
 }
