@@ -101,7 +101,7 @@ func DBConcept__getAll(cxn *Connection, offset int, count int, query string, sor
 		return nil, err
 	}
 
-	var concepts []DBConcept
+	concepts := make([]DBConcept, 0, 0)
 	for rows.Next() {
 		concept := DBConcept{}
 		err := concept.readRow(rows)
@@ -158,7 +158,7 @@ func DBConcept__getByType(cxn *Connection, type_name string, offset int, count i
 		return nil, err
 	}
 
-	var concepts []DBConcept
+	concepts := make([]DBConcept, 0, 0)
 	for rows.Next() {
 		concept := DBConcept{}
 		err := concept.readRow(rows)
@@ -177,7 +177,7 @@ func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search s
 		return nil, err
 	}
 
-	var concepts []DBConcept
+	concepts := make([]DBConcept, 0, 0)
 	for rows.Next() {
 		concept := DBConcept{}
 		err := concept.readRow(rows)
@@ -283,7 +283,7 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 		return
 	}
 
-	var final_relationships []DBConcept__Relationship
+	final_relationships := make([]DBConcept__Relationship, 0, 0)
 	for _, rel := range *relationships {
 		var other_concept *DBConcept
 		var reverse bool
@@ -318,6 +318,8 @@ func DBConcept__getSortStrings(sort_raw string) (string, string) {
 		sort = "name"
 	} else if strings.HasPrefix(sort_raw, "type-") {
 		sort = "type"
+	} else if strings.HasPrefix(sort_raw, "timestamp-") {
+		sort = "timestamp"
 	} else {
 		sort = "id"
 	}
