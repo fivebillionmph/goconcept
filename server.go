@@ -8,6 +8,7 @@ import (
 	"encoding/gob"
 	"log"
 	"os"
+	"strconv"
 )
 
 type Server struct {
@@ -36,12 +37,13 @@ func NewServer(cookie_key string, dbhost string, dbuser string, dbpassword strin
 	return &Server{http_server, logger, cookie_wrapper, concept_types, concept_relationship_types, connection, router}, nil
 }
 
-func (s *Server) Start() {
+func (s *Server) Start(port int) {
 	s.http_server.Handle("/", s.router)
 
 	go func() {
 		s.Logger.Println("starting server")
-		_ = http.ListenAndServe(":8080", s.http_server)
+		port_str := ":" + strconv.Itoa(port)
+		_ = http.ListenAndServe(port_str, s.http_server)
 	}()
 
 	serverCommands(s)
