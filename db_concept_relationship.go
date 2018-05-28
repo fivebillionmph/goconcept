@@ -70,7 +70,7 @@ func DBConceptRelationship__getByID(cxn *Connection, id int) (*DBConceptRelation
 	return &rel, nil
 }
 
-func DBConceptRelationship__getByConceptID(cxn *Connection, id int) (*[]DBConceptRelationship, error) {
+func DBConceptRelationship__getByConceptID(cxn *Connection, id int) ([]DBConceptRelationship, error) {
 	rows, err := cxn.DB.Query("select * from " + DBConceptRelationship__table + " where id1 = ? or id2 = ?", id, id)
 	if err != nil {
 		return nil, err

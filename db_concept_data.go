@@ -59,7 +59,7 @@ func DBConceptData__getByID(cxn *Connection, id int) (*DBConceptData, error) {
 	return &concept_data, nil
 }
 
-func DBConceptData__getByConceptID(cxn *Connection, concept_id int) (*[]DBConceptData, error) {
+func DBConceptData__getByConceptID(cxn *Connection, concept_id int) ([]DBConceptData, error) {
 	rows, err := cxn.DB.Query("select * from " + DBConceptData__table + " where concept_id = ?", concept_id)
 	if err != nil {
 		return nil, err

@@ -79,7 +79,7 @@ func DBAPIKey__getByKey(cxn *Connection, key_str string) (*DBAPIKey, error) {
 	return &key, nil
 }
 
-func DBAPIKey__getByUserID(cxn *Connection, user_id int) (*[]DBAPIKey, error) {
+func DBAPIKey__getByUserID(cxn *Connection, user_id int) ([]DBAPIKey, error) {
 	rows, err := cxn.DB.Query("select * from " + DBAPIKey__table + " where user_id = ?", user_id)
 	if err != nil {
 		return nil, err

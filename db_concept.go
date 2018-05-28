@@ -16,8 +16,8 @@ type DBConcept struct {
 	F_type string	`json:"type"`
 	F_name string	`json:"name"`
 
-	Data *[]DBConceptData	`json:"data"`
-	Relationships *[]DBConcept__Relationship `json:"relationships"`
+	Data []DBConceptData	`json:"data"`
+	Relationships []DBConcept__Relationship `json:"relationships"`
 
 	data_count_map map[string]int
 	data_index_map map[string][]int
@@ -87,7 +87,7 @@ func DBConcept__getByID(cxn *Connection, id int) (*DBConcept, error) {
 	return &concept, nil
 }
 
-func DBConcept__getAll(cxn *Connection, offset int, count int, query string, sort_raw string) (*[]DBConcept, error) {
+func DBConcept__getAll(cxn *Connection, offset int, count int, query string, sort_raw string) ([]DBConcept, error) {
 	sort, asc := DBConcept__getSortStrings(sort_raw)
 
 	var rows *sql.Rows
@@ -144,7 +144,7 @@ func DBConcept__getByTypeName(cxn *Connection, type_name string, name string) (*
 	return &concept, nil
 }
 
-func DBConcept__getByType(cxn *Connection, type_name string, offset int, count int, query string, sort_raw string) (*[]DBConcept, error) {
+func DBConcept__getByType(cxn *Connection, type_name string, offset int, count int, query string, sort_raw string) ([]DBConcept, error) {
 	sort, asc := DBConcept__getSortStrings(sort_raw)
 
 	var rows *sql.Rows
@@ -171,7 +171,7 @@ func DBConcept__getByType(cxn *Connection, type_name string, offset int, count i
 	return &concepts, nil
 }
 
-func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search string, offset int, count int) (*[]DBConcept, error) {
+func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search string, offset int, count int) ([]DBConcept, error) {
 	rows, err := cxn.DB.Query("select * from " + DBConcept__table + " where type = ? and name like ? limit ?, ?", type_name, "%" + name_search + "%", offset, count)
 	if err != nil {
 		return nil, err
