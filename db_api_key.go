@@ -94,7 +94,7 @@ func DBAPIKey__getByUserID(cxn *Connection, user_id int) ([]DBAPIKey, error) {
 		}
 	}
 
-	return &keys, nil
+	return keys, nil
 }
 
 func DBAPIKey__getCountByUserID(cxn *Connection, user_id int, active_only bool) (int, error) {

@@ -271,7 +271,7 @@ func (s *Server) addAdminRoutes() {
 		}
 
 		if server_concept_data.Single {
-			for _, data := range *concept_type.Data {
+			for _, data := range concept_type.Data {
 				if data.F_key == server_concept_data.Type_name {
 					http.Error(w, "data key already exists", http.StatusBadRequest)
 					return
@@ -319,7 +319,7 @@ func (s *Server) addAdminRoutes() {
 		}
 
 		var concept_data *DBConceptData
-		for _, cd := range *concept_type.Data {
+		for _, cd := range concept_type.Data {
 			if cd.F_key == body_data.Data_key && cd.F_value == body_data.Data_value {
 				concept_data = &cd
 				break

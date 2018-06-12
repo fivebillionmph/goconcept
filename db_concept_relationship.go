@@ -85,7 +85,7 @@ func DBConceptRelationship__getByConceptID(cxn *Connection, id int) ([]DBConcept
 		}
 	}
 
-	return &rels, nil
+	return rels, nil
 }
 
 func DBConceptRelationship__getByIDsStrings(cxn *Connection, id1 int, id2 int, string1 string, string2 string) (*DBConceptRelationship, error) {

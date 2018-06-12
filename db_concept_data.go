@@ -74,7 +74,7 @@ func DBConceptData__getByConceptID(cxn *Connection, concept_id int) ([]DBConcept
 		}
 	}
 
-	return &data, nil
+	return data, nil
 }
 
 func DBConceptData__delete(cxn *Connection, concept_data *DBConceptData) error {

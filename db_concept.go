@@ -111,7 +111,7 @@ func DBConcept__getAll(cxn *Connection, offset int, count int, query string, sor
 		}
 	}
 
-	return &concepts, nil
+	return concepts, nil
 }
 
 func DBConcept__countAll(cxn *Connection, query string) (int, error) {
@@ -168,7 +168,7 @@ func DBConcept__getByType(cxn *Connection, type_name string, offset int, count i
 		}
 	}
 
-	return &concepts, nil
+	return concepts, nil
 }
 
 func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search string, offset int, count int) ([]DBConcept, error) {
@@ -187,7 +187,7 @@ func DBConcept__getBySearchName(cxn *Connection, type_name string, name_search s
 		}
 	}
 
-	return &concepts, nil
+	return concepts, nil
 }
 
 /* update */
@@ -202,7 +202,7 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 	var err error
 
 	concept.LoadData(cxn)
-	for _, d := range *concept.Data {
+	for _, d := range concept.Data {
 		err = DBConceptData__delete(cxn, &d)
 		if err != nil {
 			return err
@@ -213,7 +213,7 @@ func DBConcept__delete(cxn *Connection, concept *DBConcept) error {
 	if err != nil {
 		return err
 	}
-	for _, r := range *relationships {
+	for _, r := range relationships {
 		err = DBConceptRelationship__delete(cxn, &r)
 		if err != nil {
 			return err
@@ -249,7 +249,7 @@ func (d *DBConcept) LoadData(cxn *Connection) {
 	}
 
 	d.Data = data
-	for i, datum := range *d.Data {
+	for i, datum := range d.Data {
 		if _, ok := d.data_count_map[datum.F_key]; !ok {
 			d.data_count_map[datum.F_key] = 0
 		}
@@ -284,7 +284,7 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 	}
 
 	final_relationships := make([]DBConcept__Relationship, 0, 0)
-	for _, rel := range *relationships {
+	for _, rel := range relationships {
 		var other_concept *DBConcept
 		var reverse bool
 		if rel.F_id1 == d.F_id {
@@ -303,7 +303,7 @@ func (d *DBConcept) LoadRelationships(cxn *Connection) {
 		final_relationships = append(final_relationships, this_relationship)
 	}
 
-	d.Relationships = &final_relationships
+	d.Relationships = final_relationships
 }
 
 func DBConcept__getSortStrings(sort_raw string) (string, string) {
@@ -354,5 +354,5 @@ func (d *DBConcept) GetDataVal(name string, index int) string {
 
 	real_index := d.data_index_map[name][index]
 
-	return (*d.Data)[real_index].F_value
+	return d.Data[real_index].F_value
 }
