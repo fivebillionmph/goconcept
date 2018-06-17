@@ -13,7 +13,7 @@ func (s *Server) AddRouterPath(path string, method string, handler func(http.Res
 	}
 
 	s.router.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-		handler(w, r, s.connection, s.cookie_wrapper)
+		handler(w, r, s.Connection, s.cookie_wrapper)
 	}).Methods(method)
 
 	return nil

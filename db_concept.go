@@ -355,12 +355,12 @@ func (d *DBConcept) GetDataVal(name string, index int) string {
 	return d.Data[real_index].F_value
 }
 
-func (d *DBConcept) GetRelationshipsConceptByTypeString(cxn *Connection, concept_type string, rel_type string) []gc.DBConcept {
-	rel_concepts := make([]gc.DBConcept, 0)
+func (d *DBConcept) GetRelationshipsConceptByTypeString(cxn *Connection, concept_type string, rel_type string) []DBConcept {
+	rel_concepts := make([]DBConcept, 0)
 	d.LoadRelationships(cxn)
 	for _, rel := range d.Relationships {
 		if rel.GetForwardString() == rel_type && rel.Concept.F_type == concept_type {
-			rel_concepts := append(rel_concepts, *rel.Concept)
+			rel_concepts = append(rel_concepts, *rel.Concept)
 		}
 	}
 

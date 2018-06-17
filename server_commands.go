@@ -43,7 +43,7 @@ func serverCommands_useradd(server *Server, cmds []string) {
 		level = 2
 	}
 
-	_, err := DBUser__create(server.connection, email, password, username, level)
+	_, err := DBUser__create(server.Connection, email, password, username, level)
 	if err != nil {
 		fmt.Printf("error occured: %v\n", err)
 		return

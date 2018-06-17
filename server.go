@@ -17,7 +17,7 @@ type Server struct {
 	cookie_wrapper *CookieWrapper
 	concept_types map[string]*ConceptType
 	concept_relationship_types []*ConceptRelationshipType
-	connection *Connection
+	Connection *Connection
 	router *mux.Router
 }
 
@@ -92,7 +92,7 @@ func (s *Server) AddConceptType(concept_type ConceptType) error {
 				return
 			}
 
-			concept.LoadRelationships(s.connection)
+			concept.LoadRelationships(s.Connection)
 
 			s.SendJSONResponse(w, r, concept)
 		}
