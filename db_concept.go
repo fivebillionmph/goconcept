@@ -31,7 +31,6 @@ type DBConcept__Relationship struct {
 }
 
 /* create */
-
 func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConcept, error) {
 	row := cxn.DB.QueryRow("select count(*) from " + DBConcept__table + " where type = ? and name = ?", type_name, name)
 	var count int
@@ -62,7 +61,6 @@ func DBConcept__create(cxn *Connection, type_name string, name string) (*DBConce
 }
 
 /* read */
-
 func (d *DBConcept) readRow(row SQLRowInterface) error {
 	err := row.Scan(
 		&d.F_id,
@@ -355,4 +353,42 @@ func (d *DBConcept) GetDataVal(name string, index int) string {
 	real_index := d.data_index_map[name][index]
 
 	return d.Data[real_index].F_value
+}
+
+func (d *DBConcept) GetRelationshipsConceptByTypeString(cxn *Connection, concept_type string, rel_type string) []gc.DBConcept {
+	rel_concepts := make([]gc.DBConcept, 0)
+	d.LoadRelationships(cxn)
+	for _, rel := range d.Relationships {
+		if rel.GetForwardString() == rel_type && rel.Concept.F_type == concept_type {
+			rel_concepts := append(rel_concepts, *rel.Concept)
+		}
+	}
+
+	return rel_concepts
+}
+
+func (d *DBConcept) GetRelationshipsCountByTypeString(cxn *Connection, concept_type string, rel_type string) int {
+	d.LoadRelationships(cxn)
+	count := 0
+	for _, rel := range d.Relationships {
+		if rel.GetForwardString() == rel_type && rel.Concept.F_type == concept_type {
+			count += 1
+		}
+	}
+
+	return count
+}
+
+func (rel *DBConcept__Relationship) GetForwardString() string {
+	if rel.Reverse {
+		return rel.String2
+	}
+	return rel.String1
+}
+
+func (rel *DBConcept__Relationship) GetReverseString() string {
+	if rel.Reverse {
+		return rel.String1
+	}
+	return rel.String2
 }

@@ -93,11 +93,13 @@ export default class Comp extends Component {
 				existing_keys.add(concept.data[i].key)
 			}
 		}
-		for(let i = 0; i < type.concept_data.length; i++) {
-			if(type.concept_data[i].single && existing_keys.has(type.concept_data[i].type)) {
-				continue;
+		if(type.concept_data) {
+			for(let i = 0; i < type.concept_data.length; i++) {
+				if(type.concept_data[i].single && existing_keys.has(type.concept_data[i].type)) {
+					continue;
+				}
+				data_names.push(type.concept_data[i].type);
 			}
-			data_names.push(type.concept_data[i].type);
 		}
 		return data_names;
 	}
@@ -405,7 +407,7 @@ export default class Comp extends Component {
 											Data
 										</div>
 										<div>
-											<textarea name="data"></textarea>
+											<textarea rows="6" cols="30" name="data"></textarea>
 										</div>
 										<input type="submit" value="Submit" />
 									</NewDataFormWrapper>
